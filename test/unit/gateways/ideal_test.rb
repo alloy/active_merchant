@@ -57,7 +57,7 @@ class IdealTest < Test::Unit::TestCase
   end
 
   def test_build_directory_request
-    request = @gateway.build_directory_request()  
+    request = @gateway.build_directory_request
     xml_request = REXML::Document.new(request)
 
     assert_ideal_message xml_request, 'DirectoryReq'

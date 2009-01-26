@@ -1,4 +1,5 @@
 require File.dirname(__FILE__) + '/ideal/ideal_response'
+
 module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     # First, make sure you have everything setup correctly and all of your dependencies in place with:
@@ -58,56 +59,54 @@ module ActiveMerchant #:nodoc:
       require 'digest/sha1'
 
       class_inheritable_accessor :test_url, :live_url
-  
+
       # These constants will never change for most users
       AUTHENTICATION_TYPE = 'SHA1_RSA'
       LANGUAGE = 'nl'
       SUB_ID = '0'
       API_VERSION = '1.1.0'
-      
+
       def initialize(options = {})
-        requires!(options,:password, :ideal_cert, :private_cert, :private_key, :merchant)
+        requires!(options, :password, :ideal_cert, :private_cert, :private_key, :merchant)
         @options = options
         super
       end
 
       def token
-        if @token.nil? 
+        if @token.nil?
           @token = create_fingerprint(File.read(@options[:private_cert])) 
         end
         @token
       end
-      
+
       # Setup transaction. Get redirect_url from response.service_url
       def setup_purchase(money, options = {})
         requires!(options, :issuer_id, :expiration_period, :return_url, :order_id, :currency, :description, :entrance_code)
-
         commit(build_transaction_request(money, options))
       end
-    
+
       # Check status of transaction and confirm payment
       # transaction_id must be a valid transaction_id from a prior setup.
       def capture(options = {})
         requires!(options, :transaction_id)
-        
         commit(build_status_request(options))
       end
 
       # Get list of issuers from response.issuer_list
-      def issuers()
+      def issuers
         commit(build_directory_request)
       end
 
       def acquirer_url
         test? ? IdealGateway.test_url : IdealGateway.live_url
       end
-      
-      # <?xml version="1.0" encoding="UTF-8"?> 
-      # <AcquirerTrxReq xmlns="http://www.idealdesk.com/Message" version="1.1.0"> 
-      #  <createDateTimeStamp>2001-12-17T09:30:47.0Z</createDateTimeStamp> 
-      #  <Issuer> 
-      #   <issuerID>1003</issuerID> 
-      #  </Issuer>  
+
+      # <?xml version="1.0" encoding="UTF-8"?>
+      # <AcquirerTrxReq xmlns="http://www.idealdesk.com/Message" version="1.1.0">
+      #  <createDateTimeStamp>2001-12-17T09:30:47.0Z</createDateTimeStamp>
+      #  <Issuer>
+      #   <issuerID>1003</issuerID>
+      #  </Issuer>
       #   <Merchant> 
       #     <merchantID>000123456</merchantID> 
       #     <subID>0</subID> 
@@ -260,24 +259,24 @@ module ActiveMerchant #:nodoc:
         return IdealResponse.new(success, response.keys[0] , response, :test => test?)        
       end
 
-      def create_fingerprint cert_data
+      def create_fingerprint(cert_data)
         Digest::SHA1.hexdigest(
           OpenSSL::X509::Certificate.new(cert_data).to_der
         ).upcase        
       end
 
-      def sign_message privatekey_file, password, data
+      def sign_message(privatekey_file, password, data)
         privatekey  = OpenSSL::PKey::RSA.new(File.read(privatekey_file), password)
         signature   = privatekey.sign( OpenSSL::Digest::SHA1.new, data.gsub(/ /, '').gsub(/\t/, '').gsub(/\n/, '') )
         return Base64.encode64(signature).gsub(/\n/, "")
       end
 
-      def verify_message cert_file, data, signature
+      def verify_message(cert_file, data, signature)
         pub_key = OpenSSL::X509::Certificate.new(File.read(cert_file)).public_key
         return pub_key.verify(OpenSSL::Digest::SHA1.new, Base64.decode64(signature), data)
       end
       
-      def status_response_verified? response
+      def status_response_verified?(response)
         transaction = response['AcquirerStatusRes']['Transaction']
         message = response['AcquirerStatusRes']["createDateTimeStamp" ] + transaction["transactionID" ] + transaction["status"] 
         message = message + transaction['consumerAccountNumber'] unless transaction['consumerAccountNumber'].nil?
