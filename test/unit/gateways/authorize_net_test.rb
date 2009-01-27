@@ -13,7 +13,7 @@ class AuthorizeNetTest < Test::Unit::TestCase
 
   def test_successful_authorization
     @gateway.expects(:ssl_post).returns(successful_authorization_response)
-  
+
     assert response = @gateway.authorize(@amount, @credit_card)
     assert_instance_of Response, response
     assert_success response
@@ -22,7 +22,7 @@ class AuthorizeNetTest < Test::Unit::TestCase
   
   def test_successful_purchase
     @gateway.expects(:ssl_post).returns(successful_purchase_response)
-  
+
     assert response = @gateway.purchase(@amount, @credit_card)
     assert_instance_of Response, response
     assert_success response
@@ -31,7 +31,7 @@ class AuthorizeNetTest < Test::Unit::TestCase
   
   def test_failed_authorization
     @gateway.expects(:ssl_post).returns(failed_authorization_response)
-  
+
     assert response = @gateway.authorize(@amount, @credit_card)
     assert_instance_of Response, response
     assert_failure response
@@ -40,20 +40,20 @@ class AuthorizeNetTest < Test::Unit::TestCase
   
   def test_add_address_outsite_north_america
     result = {}
-    
+
     @gateway.send(:add_address, result, :billing_address => {:address1 => '164 Waverley Street', :country => 'DE', :state => ''} )
-    
+
     assert_equal ["address", "city", "company", "country", "phone", "state", "zip"], result.stringify_keys.keys.sort
     assert_equal 'n/a', result[:state]
-    assert_equal '164 Waverley Street', result[:address] 
-    assert_equal 'DE', result[:country]     
+    assert_equal '164 Waverley Street', result[:address]
+    assert_equal 'DE', result[:country]
   end
-                                                             
+
   def test_add_address
     result = {}
-    
+
     @gateway.send(:add_address, result, :billing_address => {:address1 => '164 Waverley Street', :country => 'US', :state => 'CO'} )
-    
+
     assert_equal ["address", "city", "company", "country", "phone", "state", "zip"], result.stringify_keys.keys.sort
     assert_equal 'CO', result[:state]
     assert_equal '164 Waverley Street', result[:address]
@@ -72,7 +72,7 @@ class AuthorizeNetTest < Test::Unit::TestCase
     @gateway.send(:add_invoice, result, :description => 'My Purchase is great')
     assert_equal 'My Purchase is great', result[:description]
   end
-  
+
   def test_add_duplicate_window_without_duplicate_window
     result = {}
     ActiveMerchant::Billing::AuthorizeNetGateway.duplicate_window = nil
