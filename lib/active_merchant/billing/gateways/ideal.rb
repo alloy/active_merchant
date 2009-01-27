@@ -21,16 +21,29 @@ module ActiveMerchant #:nodoc:
       def build_transaction_request_body(money, options)
         requires!(options, :issuer_id, :expiration_period, :return_url, :order_id, :currency, :description, :entrance_code)
 
+        timestamp = created_at_timestamp
+        message = timestamp +
+                  options[:issuer_id] +
+                  @merchant +
+                  @sub_id.to_s +
+                  options[:return_url] +
+                  options[:order_id] +
+                  money.to_s +
+                  options[:currency] +
+                  LANGUAGE +
+                  options[:description] +
+                  options[:entrance_code]
+
         xml_for(:acquirer_transaction_request, {
-          :created_at => 'created_at_timestamp',
-          :issuer => { :issuer_id => '0001' },
+          :created_at => timestamp,
+          :issuer => { :issuer_id => options[:issuer_id] },
 
           :merchant => {
             :merchant_id =>         @merchant,
             :sub_id =>              @sub_id,
             :authentication =>      AUTHENTICATION_TYPE,
             :token =>               token,
-            :token_code =>          token_code,
+            :token_code =>          token_code(message),
             :merchant_return_url => options[:return_url]
           },
 
