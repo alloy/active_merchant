@@ -23,7 +23,19 @@ module IdealTestCases
 
     def test_pretty_to_ugly_keys_conversion
       keys = [
-        [:created_at, 'createDateTimeStamp']
+        [:acquirer_transaction_request, 'AcquirerTrxReq'],
+        [:created_at,                   'createDateTimeStamp'],
+        [:issuer,                       'Issuer'],
+        [:merchant,                     'Merchant'],
+        [:transaction,                  'Transaction'],
+        [:issuer_id,                    'issuerID'],
+        [:merchant_id,                  'merchantID'],
+        [:sub_id,                       'subID'],
+        [:token_code,                   'tokenCode'],
+        [:merchant_return_url,          'merchantReturnURL'],
+        [:purchase_id,                  'purchaseID'],
+        [:expiration_period,            'expirationPeriod'],
+        [:entrance_code,                'entranceCode']
       ]
 
       keys.each do |key, expected_key|
@@ -46,7 +58,7 @@ module IdealTestCases
       expected_xml.instruct!
       expected_xml.tag!('AcquirerTrxReq', 'xmlns' => IdealGateway::XML_NAMESPACE, 'version' => IdealGateway::API_VERSION) {}
 
-      assert_equal expected_xml.target!, @gateway.send(:xml_for, 'AcquirerTrxReq', {})
+      assert_equal expected_xml.target!, @gateway.send(:xml_for, :acquirer_transaction_request, {})
     end
 
     def test_creates_correct_xml_from_hash_with_ugly_keys
@@ -58,7 +70,7 @@ module IdealTestCases
         end
       end
 
-      assert_equal expected_xml.target!, @gateway.send(:xml_for, 'AcquirerTrxReq', :a_parent => { :created_at => '2009-01-26' })
+      assert_equal expected_xml.target!, @gateway.send(:xml_for, :acquirer_transaction_request, :a_parent => { :created_at => '2009-01-26' })
     end
   end
 
@@ -95,7 +107,7 @@ module IdealTestCases
 
     # def test_builds_a_transaction_request_body
     #   @gateway.stubs(:created_at_timestamp).returns('timestamp')
-    # 
+    #   
     #   @gateway.expects(:xml_for).with('AcquirerTrxReq', {
     #     :created_at => 'timestamp',
     #     :issuer => { :issuer_id => '0001' },
@@ -108,7 +120,13 @@ module IdealTestCases
     #       :merchant_return_url => ''
     #     },
     #     :transaction => {
-    #       
+    #       :purchase_id => '',
+    #       :amount => '',
+    #       :currency => 'EUR',
+    #       :expiration_period => '',
+    #       :language => 'nl',
+    #       :description => '',
+    #       :entrance_code => ''
     #     }
     #   })
     # end

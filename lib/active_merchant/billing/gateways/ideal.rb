@@ -22,18 +22,29 @@ module ActiveMerchant #:nodoc:
       end
 
       def uglify_key(key)
+        key = key.to_s
         case key
-        when :created_at
+        when 'acquirer_transaction_request'
+          'AcquirerTrxReq'
+        when 'issuer', 'merchant', 'transaction'
+          key.capitalize
+        when 'created_at'
           'createDateTimeStamp'
+        when 'merchant_return_url'
+          'merchantReturnURL'
+        when 'token_code', 'expiration_period', 'entrance_code'
+          key[0,1] + key.camelize[1..-1]
+        when /(\w+)_id$/
+          "#{$1}ID"
         else
-          key.to_s
+          key
         end
       end
 
       def xml_for(name, tags_and_values)
         xml = Builder::XmlMarkup.new
         xml.instruct!
-        xml.tag!(name, 'xmlns' => XML_NAMESPACE, 'version' => API_VERSION) do
+        xml.tag!(uglify_key(name), 'xmlns' => XML_NAMESPACE, 'version' => API_VERSION) do
           xml_from_hash(xml, tags_and_values)
         end
         xml.target!
