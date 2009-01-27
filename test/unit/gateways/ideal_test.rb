@@ -4,14 +4,19 @@ module IdealTestCases
   DEFAULT_IDEAL_OPTIONS = {
     :merchant => "123456789",
     :private_key => "PRIVATE_KEY",
-    :private_cert => "PRIVATE_CERT",
-    :ideal_cert => "IDEAL_CERT",
+    :private_certificate => "PRIVATE_CERT",
+    :ideal_certificate => "IDEAL_CERT",
     :password => "PASSWORD"
   }
 
   class GeneralTest < Test::Unit::TestCase
     def setup
       @gateway = IdealGateway.new(DEFAULT_IDEAL_OPTIONS)
+    end
+
+    def test_optional_options
+      assert_equal 0, IdealGateway.new(DEFAULT_IDEAL_OPTIONS).sub_id
+      assert_equal 1, IdealGateway.new(DEFAULT_IDEAL_OPTIONS.merge(:sub_id => 1)).sub_id
     end
 
     def test_returns_created_at_timestamp
@@ -84,12 +89,15 @@ module IdealTestCases
         :return_url        => 'http://return_to.example.com',
         :order_id          => '1234567890123456',
         :currency          => 'EUR',
-        :description       => 'A description',
+        :description       => 'A classic Dutch windmill for in the garden',
         :entrance_code     => '1234'
       }
     end
 
     def test_valid_with_required_options
+      @gateway.stubs(:token)
+      @gateway.stubs(:token_code)
+
       assert_nothing_raised(ArgumentError) do
         @gateway.build_transaction_request_body 100, @valid_options
       end
@@ -105,31 +113,38 @@ module IdealTestCases
       end
     end
 
-    # def test_builds_a_transaction_request_body
-    #   @gateway.stubs(:created_at_timestamp).returns('timestamp')
-    #   
-    #   @gateway.expects(:xml_for).with('AcquirerTrxReq', {
-    #     :created_at => 'timestamp',
-    #     :issuer => { :issuer_id => '0001' },
-    #     :merchant => {
-    #       :merchant_id => '',
-    #       :sub_id => '',
-    #       :authentication => '',
-    #       :token => '',
-    #       :token_code => ''
-    #       :merchant_return_url => ''
-    #     },
-    #     :transaction => {
-    #       :purchase_id => '',
-    #       :amount => '',
-    #       :currency => 'EUR',
-    #       :expiration_period => '',
-    #       :language => 'nl',
-    #       :description => '',
-    #       :entrance_code => ''
-    #     }
-    #   })
-    # end
+    def test_builds_a_transaction_request_body
+      @gateway.stubs(:created_at_timestamp).returns('created_at_timestamp')
+
+      @gateway.stubs(:token).returns('the_token')
+      @gateway.stubs(:token_code).returns('the_token_code')
+
+      @gateway.expects(:xml_for).with(:acquirer_transaction_request, {
+        :created_at => 'created_at_timestamp',
+        :issuer => { :issuer_id => '0001' },
+
+        :merchant => {
+          :merchant_id =>         DEFAULT_IDEAL_OPTIONS[:merchant],
+          :sub_id =>              @gateway.sub_id,
+          :authentication =>      IdealGateway::AUTHENTICATION_TYPE,
+          :token =>               'the_token',
+          :token_code =>          'the_token_code',
+          :merchant_return_url => @valid_options[:return_url]
+        },
+
+        :transaction => {
+          :purchase_id =>       @valid_options[:order_id],
+          :amount =>            4321,
+          :currency =>          @valid_options[:currency],
+          :expiration_period => @valid_options[:expiration_period],
+          :language =>          IdealGateway::LANGUAGE,
+          :description =>       @valid_options[:description],
+          :entrance_code =>     @valid_options[:entrance_code]
+        }
+      })
+
+      @gateway.build_transaction_request_body(4321, @valid_options)
+    end
   end
 end
 

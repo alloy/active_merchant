@@ -3,14 +3,47 @@ require File.dirname(__FILE__) + '/ideal/ideal_response'
 module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     class IdealGateway < Gateway
-      # AUTHENTICATION_TYPE = 'SHA1_RSA'
-      # LANGUAGE = 'nl'
-      # SUB_ID = '0'
+      AUTHENTICATION_TYPE = 'SHA1_RSA'
+      LANGUAGE = 'nl'
       API_VERSION = '1.1.0'
       XML_NAMESPACE = 'http://www.idealdesk.com/Message'
 
+      OPTIONS = [:password, :ideal_certificate, :private_certificate, :private_key, :merchant, :sub_id]
+      OPTIONS.each { |option| attr_reader option }
+
+      def initialize(options = {})
+        options = { :sub_id => 0 }.merge(options)
+        requires!(options, *OPTIONS)
+        OPTIONS.each { |option_name| instance_variable_set("@#{option_name}", options[option_name]) }
+        super
+      end
+
       def build_transaction_request_body(money, options)
         requires!(options, :issuer_id, :expiration_period, :return_url, :order_id, :currency, :description, :entrance_code)
+
+        xml_for(:acquirer_transaction_request, {
+          :created_at => 'created_at_timestamp',
+          :issuer => { :issuer_id => '0001' },
+
+          :merchant => {
+            :merchant_id =>         @merchant,
+            :sub_id =>              @sub_id,
+            :authentication =>      AUTHENTICATION_TYPE,
+            :token =>               token,
+            :token_code =>          token_code,
+            :merchant_return_url => options[:return_url]
+          },
+
+          :transaction => {
+            :purchase_id =>         options[:order_id],
+            :amount =>              money,
+            :currency =>            options[:currency],
+            :expiration_period =>   options[:expiration_period],
+            :language =>            LANGUAGE,
+            :description =>         options[:description],
+            :entrance_code =>       options[:entrance_code]
+          }
+        })
       end
       
       private
@@ -21,6 +54,9 @@ module ActiveMerchant #:nodoc:
         Time.now.gmtime.strftime("%Y-%m-%dT%H:%M:%S.000Z")
       end
 
+      # iDeal doesn't really seem to care about nice looking keys in their XML.
+      # And since there doesn't seem to be any method in this madness, I could
+      # not come up with a better name than uglify_key…
       def uglify_key(key)
         key = key.to_s
         case key
@@ -34,7 +70,7 @@ module ActiveMerchant #:nodoc:
           'merchantReturnURL'
         when 'token_code', 'expiration_period', 'entrance_code'
           key[0,1] + key.camelize[1..-1]
-        when /(\w+)_id$/
+        when /^(\w+)_id$/
           "#{$1}ID"
         else
           key
