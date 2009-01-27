@@ -9,7 +9,7 @@ module ActiveMerchant #:nodoc:
       XML_NAMESPACE = 'http://www.idealdesk.com/Message'
 
       OPTIONS = [:password, :ideal_certificate, :private_certificate, :private_key, :merchant, :sub_id]
-      OPTIONS.each { |option| attr_reader option }
+      attr_reader *OPTIONS
 
       def initialize(options = {})
         options = { :sub_id => 0 }.merge(options)
@@ -48,6 +48,19 @@ module ActiveMerchant #:nodoc:
       
       private
 
+      # Returns the +token+ as specified in section 2.8.4 of the iDeal specs.
+      def token
+        certificate = OpenSSL::X509::Certificate.new(File.read(@private_certificate))
+        Digest::SHA1.hexdigest(certificate.to_der).upcase
+      end
+
+      # Creates a +tokenCode+ from the specified +message+.
+      def token_code(message)
+        key = OpenSSL::PKey::RSA.new(File.read(@private_key), @password)
+        signature = key.sign(OpenSSL::Digest::SHA1.new, message.gsub(/\s/m, ''))
+        Base64.encode64(signature).strip
+      end
+
       # Returns a string containing the current UTC time, formatted as per the
       # iDeal specifications, except we don't use miliseconds.
       def created_at_timestamp
@@ -77,6 +90,8 @@ module ActiveMerchant #:nodoc:
         end
       end
 
+      # Creates xml with a given hash of tag-value pairs according to the iDeal
+      # requirements.
       def xml_for(name, tags_and_values)
         xml = Builder::XmlMarkup.new
         xml.instruct!
@@ -86,6 +101,8 @@ module ActiveMerchant #:nodoc:
         xml.target!
       end
 
+      # Recursively creates xml for a given hash of tag-value pair. Uses
+      # uglify_key on the tags to create the tags needed by iDeal.
       def xml_from_hash(builder, tags_and_values)
         tags_and_values.each do |tag, value|
           tag = uglify_key(tag)
@@ -368,6 +385,8 @@ end
 #         ).upcase        
 #       end
 # 
+#         token_code = sign_message(@options[:private_key], @options[:password], message)
+
 #       def sign_message(privatekey_file, password, data)
 #         privatekey  = OpenSSL::PKey::RSA.new(File.read(privatekey_file), password)
 #         signature   = privatekey.sign( OpenSSL::Digest::SHA1.new, data.gsub(/ /, '').gsub(/\t/, '').gsub(/\n/, '') )
