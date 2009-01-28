@@ -9,6 +9,11 @@ module IdealTestCases
     :password => "PASSWORD"
   }
 
+  class ActiveMerchant::Billing::IdealGateway
+    self.test_url = "https://idealtest.example.com:443/ideal/iDeal"
+    self.live_url = "https://ideal.example.com:443/ideal/iDeal"
+  end
+
   class GeneralTest < Test::Unit::TestCase
     def setup
       @gateway = IdealGateway.new(DEFAULT_IDEAL_OPTIONS)
@@ -17,6 +22,16 @@ module IdealTestCases
     def test_optional_initialization_options
       assert_equal 0, IdealGateway.new(DEFAULT_IDEAL_OPTIONS).sub_id
       assert_equal 1, IdealGateway.new(DEFAULT_IDEAL_OPTIONS.merge(:sub_id => 1)).sub_id
+    end
+
+    def test_returns_the_test_url_when_in_the_test_env
+      @gateway.stubs(:test?).returns(true)
+      assert_equal IdealGateway.test_url, @gateway.send(:acquirer_url)
+    end
+
+    def test_returns_the_live_url_when_not_in_the_test_env
+      @gateway.stubs(:test?).returns(false)
+      assert_equal IdealGateway.live_url, @gateway.send(:acquirer_url)
     end
 
     def test_returns_created_at_timestamp

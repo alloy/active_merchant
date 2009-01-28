@@ -8,6 +8,14 @@ module ActiveMerchant #:nodoc:
       API_VERSION = '1.1.0'
       XML_NAMESPACE = 'http://www.idealdesk.com/Message'
 
+      # Assign the test and production urls for your iDeal acquirer.
+      #
+      # For instance, for ING:
+      #
+      #   ActiveMerchant::Billing::IdealGateway.test_url = "https://idealtest.secure-ing.com:443/ideal/iDeal"
+      #   ActiveMerchant::Billing::IdealGateway.live_url = "https://ideal.secure-ing.com:443/ideal/iDeal"
+      class_inheritable_accessor :test_url, :live_url
+
       OPTIONS = [:password, :ideal_certificate, :private_certificate, :private_key, :merchant, :sub_id]
       attr_reader *OPTIONS
 
@@ -58,8 +66,15 @@ module ActiveMerchant #:nodoc:
           }
         })
       end
-      
+
       private
+
+      # Returns the url of the according matching the current environment. When
+      # #test? returns +true+ the IdealGateway.test_url is used, otherwise the
+      # IdealGateway.live_url is used.
+      def acquirer_url
+        test? ? self.class.test_url : self.class.live_url
+      end
 
       # Returns the +token+ as specified in section 2.8.4 of the iDeal specs.
       def token
@@ -199,18 +214,6 @@ end
       # SUB_ID = '0'
       # API_VERSION = '1.1.0'
 # 
-#       def initialize(options = {})
-#         requires!(options, :password, :ideal_cert, :private_cert, :private_key, :merchant)
-#         @options = options
-#         super
-#       end
-# 
-#       def token
-#         if @token.nil?
-#           @token = create_fingerprint(File.read(@options[:private_cert])) 
-#         end
-#         @token
-#       end
 # 
 #       # Setup transaction. Get redirect_url from response.service_url
 #       def setup_purchase(money, options = {})
@@ -232,76 +235,6 @@ end
 # 
 #       def acquirer_url
 #         test? ? IdealGateway.test_url : IdealGateway.live_url
-#       end
-# 
-#       # <?xml version="1.0" encoding="UTF-8"?>
-#       # <AcquirerTrxReq xmlns="http://www.idealdesk.com/Message" version="1.1.0">
-#       #  <createDateTimeStamp>2001-12-17T09:30:47.0Z</createDateTimeStamp>
-#       #  <Issuer>
-#       #   <issuerID>1003</issuerID>
-#       #  </Issuer>
-#       #   <Merchant> 
-#       #     <merchantID>000123456</merchantID> 
-#       #     <subID>0</subID> 
-#       #     <authentication>passkey</authentication> 
-#       #     <token>1</token> 
-#       #     <tokenCode>3823ad872eff23</tokenCode> 
-#       #     <merchantReturnURL>https://www.mijnwinkel.nl/betaalafhandeling
-#       #      </merchantReturnURL> 
-#       #   </Merchant> 
-#       #   <Transaction> 
-#       #     <purchaseID>iDEAL-aankoop 21</purchaseID> 
-#       #     <amount>5999</amount> 
-#       #     <currency>EUR</currency> 
-#       #     <expirationPeriod>PT3M30S</expirationPeriod> 
-#       #     <language>nl</language>                  
-#       #     <description>Documentensuite</description> 
-#       #     <entranceCode>D67tyx6rw9IhY71</entranceCode> 
-#       #   </Transaction> 
-#       # </AcquirerTrxReq>          
-#       def build_transaction_request(money, options)
-#         requires!(options, :issuer_id, :expiration_period, :return_url, :order_id, :currency, :description, :entrance_code)
-#         
-#         date_time_stamp = create_time_stamp
-#         message  = date_time_stamp +
-#                    options[:issuer_id] +
-#                    @options[:merchant] +
-#                    SUB_ID +
-#                    options[:return_url] +
-#                    options[:order_id] +
-#                    money.to_s +
-#                    options[:currency] +
-#                    LANGUAGE +
-#                    options[:description] +
-#                    options[:entrance_code]
-#         token_code = sign_message(@options[:private_key], @options[:password], message)
-#         
-#         xml = Builder::XmlMarkup.new :indent => 2
-#         xml.instruct!
-#         xml.tag! 'AcquirerTrxReq', 'xmlns' => "http://www.idealdesk.com/Message", 'version' => API_VERSION do
-#           xml.tag! 'createDateTimeStamp', date_time_stamp
-#           xml.tag! 'Issuer' do
-#             xml.tag! 'issuerID', options[:issuer_id]
-#           end
-#           xml.tag! 'Merchant' do
-#             xml.tag! 'merchantID', @options[:merchant]
-#             xml.tag! 'subID', SUB_ID
-#             xml.tag! 'authentication', AUTHENTICATION_TYPE
-#             xml.tag! 'token', token
-#             xml.tag! 'tokenCode', token_code
-#             xml.tag! 'merchantReturnURL', options[:return_url]
-#           end
-#           xml.tag! 'Transaction' do
-#             xml.tag! 'purchaseID', options[:order_id]
-#             xml.tag! 'amount', money
-#             xml.tag! 'currency', options[:currency]
-#             xml.tag! 'expirationPeriod', options[:expiration_period]
-#             xml.tag! 'language', LANGUAGE
-#             xml.tag! 'description', options[:description]
-#             xml.tag! 'entranceCode', options[:entrance_code]
-#           end
-#           xml.target!
-#         end
 #       end
 #       
 #       # <?xml version="1.0" encoding="UTF-8"?> 
