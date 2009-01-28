@@ -137,7 +137,7 @@ module IdealTestCases
       @gateway.stubs(:token_code)
 
       assert_nothing_raised(ArgumentError) do
-        @gateway.build_transaction_request_body 100, @valid_options
+        @gateway.send(:build_transaction_request_body, 100, @valid_options)
       end
     end
 
@@ -146,13 +146,15 @@ module IdealTestCases
         @valid_options.delete(key)
 
         assert_raise(ArgumentError) do
-          @gateway.build_transaction_request_body 100, @valid_options
+          @gateway.send(:build_transaction_request_body, 100, @valid_options)
         end
       end
     end
 
     def test_builds_a_transaction_request_body
       @gateway.stubs(:created_at_timestamp).returns('created_at_timestamp')
+      @gateway.stubs(:token).returns('the_token')
+
       money = 4321
 
       message = 'created_at_timestamp' +
@@ -167,7 +169,6 @@ module IdealTestCases
                 @valid_options[:description] +
                 @valid_options[:entrance_code]
 
-      @gateway.stubs(:token).returns('the_token')
       @gateway.expects(:token_code).with(message).returns('the_token_code')
 
       @gateway.expects(:xml_for).with(:acquirer_transaction_request, {
@@ -175,7 +176,7 @@ module IdealTestCases
         :issuer => { :issuer_id => @valid_options[:issuer_id] },
 
         :merchant => {
-          :merchant_id =>         DEFAULT_IDEAL_OPTIONS[:merchant],
+          :merchant_id =>         @gateway.merchant,
           :sub_id =>              @gateway.sub_id,
           :authentication =>      IdealGateway::AUTHENTICATION_TYPE,
           :token =>               'the_token',
@@ -194,7 +195,28 @@ module IdealTestCases
         }
       })
 
-      @gateway.build_transaction_request_body(money, @valid_options)
+      @gateway.send(:build_transaction_request_body, money, @valid_options)
+    end
+
+    def test_builds_a_directory_request_body
+      @gateway.stubs(:created_at_timestamp).returns('created_at_timestamp')
+      @gateway.stubs(:token).returns('the_token')
+
+      message = 'created_at_timestamp' + @gateway.merchant + @gateway.sub_id.to_s
+      @gateway.expects(:token_code).with(message).returns('the_token_code')
+
+      @gateway.expects(:xml_for).with(:directory_request, {
+        :created_at => 'created_at_timestamp',
+        :merchant => {
+          :merchant_id =>    @gateway.merchant,
+          :sub_id =>         @gateway.sub_id,
+          :authentication => IdealGateway::AUTHENTICATION_TYPE,
+          :token =>          'the_token',
+          :token_code =>     'the_token_code'
+        }
+      })
+
+      @gateway.send(:build_directory_request_body)
     end
   end
 

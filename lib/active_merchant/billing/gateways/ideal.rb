@@ -1,5 +1,61 @@
 require File.dirname(__FILE__) + '/ideal/ideal_response'
 
+require 'openssl'
+require 'net/https'
+require 'base64'
+require 'digest/sha1'
+
+#     # First, make sure you have everything setup correctly and all of your dependencies in place with:
+#     # 
+#     #   require 'rubygems'
+#     #   require 'active_merchant'
+#     #
+#     # ActiveMerchant expects the amounts to be given as an Integer in cents. In this case, 10 EUR becomes 1000.
+#     #
+#     # Configure the gateway using your Ideal account info and security settings:
+#     #
+#     # ActiveMerchant::Billing::IdealGateway.test_url = "https://idealtest.secure-ing.com:443/ideal/iDeal"
+#     # ActiveMerchant::Billing::IdealGateway.live_url = "https://ideal.secure-ing.com:443/ideal/iDeal"    
+#     # 
+#     # DEFAULT_IDEAL_OPTIONS = {
+#     #   :merchant => "123456789",
+#     #   :private_key => File.dirname(__FILE__) + "/../ideal/merchantprivatekey.pem",
+#     #   :private_cert => File.dirname(__FILE__) + "/../ideal/merchantprivatecert.cer",
+#     #   :ideal_cert => File.dirname(__FILE__) + "/../ideal/ideal.cer",
+#     #   :password => "password"
+#     # }
+#     #
+#     # Create gateway:
+#     # gateway = ActiveMerchant::Billing::Base.gateway(:ideal).new DEFAULT_IDEAL_OPTIONS 
+#     #
+#     #
+#     # Get list of issuers to fill selection list on your payment form:
+#     # response = gateway.issuers
+#     # list = response.issuer_list
+#     #
+#     # Request transaction:
+#     #
+#     # options = {
+#     #    :issuer_id=>'0001', 
+#     #    :expiration_period=>'PT10M', 
+#     #    :return_url =>'http://www.return.url', 
+#     #    :order_id=>'1234567890123456', 
+#     #    :currency=>'EUR', 
+#     #    :description => 'Een omschrijving', 
+#     #    :entrance_code => '1234'
+#     # }    
+#     #
+#     # response = gateway.setup_purchase(amount, options)
+#     # transaction_id = response.transaction['transactionID']
+#     # redirect_url = response.service_url
+#     #   
+#     # Mandatory status request will confirm transaction:
+#     # response = gateway.capture(:transaction_id => transaction_id)
+#     #
+#     # Implementation contains some simplifications
+#     # - does not support multiple subID per merchant
+#     # - language is fixed to 'nl'
+
 module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     class IdealGateway < Gateway
@@ -24,6 +80,23 @@ module ActiveMerchant #:nodoc:
         requires!(options, *OPTIONS)
         OPTIONS.each { |option_name| instance_variable_set("@#{option_name}", options[option_name]) }
         super
+      end
+
+      private
+
+      def build_directory_request_body
+        timestamp = created_at_timestamp
+
+        xml_for(:directory_request, {
+          :created_at => timestamp,
+          :merchant => {
+            :merchant_id =>    @merchant,
+            :sub_id =>         @sub_id,
+            :authentication => AUTHENTICATION_TYPE,
+            :token =>          token,
+            :token_code =>     token_code("#{timestamp}#{@merchant}#{@sub_id}")
+          }
+        })
       end
 
       def build_transaction_request_body(money, options)
@@ -66,8 +139,6 @@ module ActiveMerchant #:nodoc:
           }
         })
       end
-
-      private
 
       # Returns the url of the according matching the current environment. When
       # #test? returns +true+ the IdealGateway.test_url is used, otherwise the
@@ -150,71 +221,7 @@ end
 
 # module ActiveMerchant #:nodoc:
 #   module Billing #:nodoc:
-#     # First, make sure you have everything setup correctly and all of your dependencies in place with:
-#     # 
-#     #   require 'rubygems'
-#     #   require 'active_merchant'
-#     #
-#     # ActiveMerchant expects the amounts to be given as an Integer in cents. In this case, 10 EUR becomes 1000.
-#     #
-#     # Configure the gateway using your Ideal account info and security settings:
-#     #
-#     # ActiveMerchant::Billing::IdealGateway.test_url = "https://idealtest.secure-ing.com:443/ideal/iDeal"
-#     # ActiveMerchant::Billing::IdealGateway.live_url = "https://ideal.secure-ing.com:443/ideal/iDeal"    
-#     # 
-#     # DEFAULT_IDEAL_OPTIONS = {
-#     #   :merchant => "123456789",
-#     #   :private_key => File.dirname(__FILE__) + "/../ideal/merchantprivatekey.pem",
-#     #   :private_cert => File.dirname(__FILE__) + "/../ideal/merchantprivatecert.cer",
-#     #   :ideal_cert => File.dirname(__FILE__) + "/../ideal/ideal.cer",
-#     #   :password => "password"
-#     # }
-#     #
-#     # Create gateway:
-#     # gateway = ActiveMerchant::Billing::Base.gateway(:ideal).new DEFAULT_IDEAL_OPTIONS 
-#     #
-#     #
-#     # Get list of issuers to fill selection list on your payment form:
-#     # response = gateway.issuers
-#     # list = response.issuer_list
-#     #
-#     # Request transaction:
-#     #
-#     # options = {
-#     #    :issuer_id=>'0001', 
-#     #    :expiration_period=>'PT10M', 
-#     #    :return_url =>'http://www.return.url', 
-#     #    :order_id=>'1234567890123456', 
-#     #    :currency=>'EUR', 
-#     #    :description => 'Een omschrijving', 
-#     #    :entrance_code => '1234'
-#     # }    
-#     #
-#     # response = gateway.setup_purchase(amount, options)
-#     # transaction_id = response.transaction['transactionID']
-#     # redirect_url = response.service_url
-#     #   
-#     # Mandatory status request will confirm transaction:
-#     # response = gateway.capture(:transaction_id => transaction_id)
-#     #
-#     # Implementation contains some simplifications
-#     # - does not support multiple subID per merchant
-#     # - language is fixed to 'nl'
 #     class IdealGateway < Gateway
-#       require 'openssl'
-#       require 'net/https'
-#       require 'base64'
-#       require 'digest/sha1'
-# 
-#       class_inheritable_accessor :test_url, :live_url
-# 
-      # # These constants will never change for most users
-      # AUTHENTICATION_TYPE = 'SHA1_RSA'
-      # LANGUAGE = 'nl'
-      # SUB_ID = '0'
-      # API_VERSION = '1.1.0'
-# 
-# 
 #       # Setup transaction. Get redirect_url from response.service_url
 #       def setup_purchase(money, options = {})
 #         requires!(options, :issuer_id, :expiration_period, :return_url, :order_id, :currency, :description, :entrance_code)
@@ -231,10 +238,6 @@ end
 #       # Get list of issuers from response.issuer_list
 #       def issuers
 #         commit(build_directory_request)
-#       end
-# 
-#       def acquirer_url
-#         test? ? IdealGateway.test_url : IdealGateway.live_url
 #       end
 #       
 #       # <?xml version="1.0" encoding="UTF-8"?> 
@@ -325,20 +328,6 @@ end
 #         return IdealResponse.new(success, response.keys[0] , response, :test => test?)        
 #       end
 # 
-#       def create_fingerprint(cert_data)
-#         Digest::SHA1.hexdigest(
-#           OpenSSL::X509::Certificate.new(cert_data).to_der
-#         ).upcase        
-#       end
-# 
-#         token_code = sign_message(@options[:private_key], @options[:password], message)
-
-#       def sign_message(privatekey_file, password, data)
-#         privatekey  = OpenSSL::PKey::RSA.new(File.read(privatekey_file), password)
-#         signature   = privatekey.sign( OpenSSL::Digest::SHA1.new, data.gsub(/ /, '').gsub(/\t/, '').gsub(/\n/, '') )
-#         return Base64.encode64(signature).gsub(/\n/, "")
-#       end
-# 
 #       def verify_message(cert_file, data, signature)
 #         pub_key = OpenSSL::X509::Certificate.new(File.read(cert_file)).public_key
 #         return pub_key.verify(OpenSSL::Digest::SHA1.new, Base64.decode64(signature), data)
@@ -350,10 +339,6 @@ end
 #         message = message + transaction['consumerAccountNumber'] unless transaction['consumerAccountNumber'].nil?
 #         verify_message(@options[:ideal_cert],message,response['AcquirerStatusRes']["Signature"]["signatureValue"])
 #       end
-# 
-#       # def create_time_stamp
-#       #   Time.now.gmtime.strftime("%Y-%m-%dT%H:%M:%S.000Z")
-#       # end
 # 
 #     end
 #     
