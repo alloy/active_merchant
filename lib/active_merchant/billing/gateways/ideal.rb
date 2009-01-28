@@ -174,6 +174,8 @@ module ActiveMerchant #:nodoc:
         case key
         when 'acquirer_transaction_request'
           'AcquirerTrxReq'
+        when 'directory_request'
+          'DirectoryReq'
         when 'issuer', 'merchant', 'transaction'
           key.capitalize
         when 'created_at'
@@ -272,37 +274,6 @@ end
 #           end
 #           xml.tag! 'Transaction' do
 #             xml.tag! 'transactionID', options[:transaction_id]
-#           end
-#         end
-#         xml.target!
-#       end
-# 
-#       # <?xml version="1.0" encoding="UTF-8"?> 
-#       # <DirectoryReq xmlns="http://www.idealdesk.com/Message" version="1.1.0"> 
-#       #  <createDateTimeStamp>2001-12-17T09:30:47.0Z</createDateTimeStamp> 
-#       #  <Merchant> 
-#       #   <merchantID>000000001</merchantID> 
-#       #   <subID>0</subID> 
-#       #   <authentication>1</authentication> 
-#       #   <token>hashkey</token> 
-#       #   <tokenCode>WajqV1a3nDen0be2r196g9FGFF=</tokenCode> 
-#       #  </Merchant> 
-#       # </DirectoryReq>      
-#       def build_directory_request
-#         datetimestamp = create_time_stamp
-#         message = datetimestamp + @options[:merchant] + SUB_ID
-#         tokenCode = sign_message(@options[:private_key], @options[:password], message)
-# 
-#         xml = Builder::XmlMarkup.new :indent => 2
-#         xml.instruct!
-#         xml.tag! 'DirectoryReq', 'xmlns' => "http://www.idealdesk.com/Message", 'version' => API_VERSION do
-#           xml.tag! 'createDateTimeStamp', datetimestamp
-#           xml.tag! 'Merchant' do
-#             xml.tag! 'merchantID', @options[:merchant]
-#             xml.tag! 'subID', SUB_ID
-#             xml.tag! 'authentication', AUTHENTICATION_TYPE
-#             xml.tag! 'token', token
-#             xml.tag! 'tokenCode', tokenCode
 #           end
 #         end
 #         xml.target!

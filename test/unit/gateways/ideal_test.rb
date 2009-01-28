@@ -44,6 +44,7 @@ module IdealTestCases
     def test_pretty_to_ugly_keys_conversion
       keys = [
         [:acquirer_transaction_request, 'AcquirerTrxReq'],
+        [:directory_request,            'DirectoryReq'],
         [:created_at,                   'createDateTimeStamp'],
         [:issuer,                       'Issuer'],
         [:merchant,                     'Merchant'],
@@ -117,7 +118,7 @@ module IdealTestCases
     end
   end
 
-  class AcquirerTest < Test::Unit::TestCase
+  class RequestTest < Test::Unit::TestCase
     def setup
       @gateway = IdealGateway.new(DEFAULT_IDEAL_OPTIONS)
 
