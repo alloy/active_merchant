@@ -235,11 +235,6 @@ end
 # module ActiveMerchant #:nodoc:
 #   module Billing #:nodoc:
 #     class IdealGateway < Gateway
-#       # Setup transaction. Get redirect_url from response.service_url
-#       def setup_purchase(money, options = {})
-#         requires!(options, :issuer_id, :expiration_period, :return_url, :order_id, :currency, :description, :entrance_code)
-#         commit(build_transaction_request(money, options))
-#       end
 # 
 #       # Check status of transaction and confirm payment
 #       # transaction_id must be a valid transaction_id from a prior setup.

@@ -14,6 +14,7 @@ module ActiveMerchant #:nodoc:
       end
     end
 
+    # See section 4.3.2 for which data a user should see.
     class IdealTransactionResponse < IdealResponse
       def service_url
         @params['AcquirerTrxRes']['Issuer']['issuerAuthenticationURL']
