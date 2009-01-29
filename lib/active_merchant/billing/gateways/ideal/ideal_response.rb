@@ -3,13 +3,7 @@ module ActiveMerchant #:nodoc:
     class IdealResponse < Response
       def initialize(response_body)
         @params = Hash.from_xml(response_body)
-
-        case @params.keys.first
-        when 'ErrorRes'
-          @success = false
-        end
-
-        @success = true if @success.nil?
+        @success = @params.keys.first != 'ErrorRes'
       end
 
       def error_message
@@ -18,17 +12,15 @@ module ActiveMerchant #:nodoc:
           { :system => error['errorMessage'], :human => error['consumerMessage'] }
         end
       end
+    end
 
-      # def service_url
-      #   @params.values[0]['Issuer']['issuerAuthenticationURL']
-      # end
-      # 
+    class IdealTransactionResponse < IdealResponse
+      def service_url
+        @params['AcquirerTrxRes']['Issuer']['issuerAuthenticationURL']
+      end
+
       # def transaction
       #   @params.values[0]['Transaction']
-      # end
-      # 
-      # def error
-      #   @params.values[0]['Error']
       # end
     end
 

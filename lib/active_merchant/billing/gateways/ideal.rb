@@ -83,30 +83,15 @@ module ActiveMerchant #:nodoc:
       end
 
       def issuers
-        IdealDirectoryResponse.new(ssl_post(acquirer_url, build_directory_request_body))
+        IdealDirectoryResponse.new ssl_post(acquirer_url, build_directory_request_body)
+      end
+
+      def setup_purchase(money, options)
+        requires!(options, :issuer_id, :expiration_period, :return_url, :order_id, :currency, :description, :entrance_code)
+        IdealTransactionResponse.new ssl_post(acquirer_url, build_transaction_request_body(money, options))
       end
 
       private
-
-      #       def commit(request)
-      #         raw_response = ssl_post(acquirer_url, request)
-      #         response = Hash.from_xml(raw_response.to_s)
-      #         response_type = response.keys[0]
-      # 
-      #         case response_type
-      #           when 'AcquirerTrxRes', 'DirectoryRes'
-      #             success = true
-      #           when 'ErrorRes'
-      #             success = false
-      #           when 'AcquirerStatusRes'       
-      #             raise SecurityError, "Message verification failed.", caller unless status_response_verified? response
-      #             success = (response['AcquirerStatusRes']['Transaction']['status'] =="Success")
-      #           else
-      #             raise ArgumentError, "Unknown response type.", caller
-      #         end
-      #         
-      #         return IdealResponse.new(success, response.keys[0] , response, :test => test?)        
-      #       end
 
       def build_directory_request_body
         timestamp = created_at_timestamp
@@ -124,8 +109,6 @@ module ActiveMerchant #:nodoc:
       end
 
       def build_transaction_request_body(money, options)
-        requires!(options, :issuer_id, :expiration_period, :return_url, :order_id, :currency, :description, :entrance_code)
-
         timestamp = created_at_timestamp
         message = timestamp +
                   options[:issuer_id] +
@@ -259,11 +242,6 @@ end
 #       def capture(options = {})
 #         requires!(options, :transaction_id)
 #         commit(build_status_request(options))
-#       end
-# 
-#       # Get list of issuers from response.issuer_list
-#       def issuers
-#         commit(build_directory_request)
 #       end
 #       
 #       # <?xml version="1.0" encoding="UTF-8"?> 
