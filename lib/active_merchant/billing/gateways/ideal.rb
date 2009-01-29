@@ -83,15 +83,19 @@ module ActiveMerchant #:nodoc:
       end
 
       def issuers
-        IdealDirectoryResponse.new ssl_post(acquirer_url, build_directory_request_body)
+        IdealDirectoryResponse.new post_data(build_directory_request_body)
       end
 
       def setup_purchase(money, options)
         requires!(options, :issuer_id, :expiration_period, :return_url, :order_id, :currency, :description, :entrance_code)
-        IdealTransactionResponse.new ssl_post(acquirer_url, build_transaction_request_body(money, options))
+        IdealTransactionResponse.new post_data(build_transaction_request_body(money, options))
       end
 
       private
+
+      def post_data(data)
+        ssl_post(acquirer_url, data)
+      end
 
       def build_directory_request_body
         timestamp = created_at_timestamp
