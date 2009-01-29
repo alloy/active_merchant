@@ -54,6 +54,7 @@ module IdealTestCases
     def test_pretty_to_ugly_keys_conversion
       keys = [
         [:acquirer_transaction_request, 'AcquirerTrxReq'],
+        [:acquirer_status_request,      'AcquirerStatusReq'],
         [:directory_request,            'DirectoryReq'],
         [:created_at,                   'createDateTimeStamp'],
         [:issuer,                       'Issuer'],
@@ -157,12 +158,12 @@ module IdealTestCases
   class RequestBodyBuildingTest < Test::Unit::TestCase
     def setup
       @gateway = IdealGateway.new(IDEAL_MERCHANT_OPTIONS)
+
+      @gateway.stubs(:created_at_timestamp).returns('created_at_timestamp')
+      @gateway.stubs(:token).returns('the_token')
     end
 
     def test_builds_a_transaction_request_body
-      @gateway.stubs(:created_at_timestamp).returns('created_at_timestamp')
-      @gateway.stubs(:token).returns('the_token')
-
       money = 4321
 
       message = 'created_at_timestamp' +
@@ -207,9 +208,6 @@ module IdealTestCases
     end
 
     def test_builds_a_directory_request_body
-      @gateway.stubs(:created_at_timestamp).returns('created_at_timestamp')
-      @gateway.stubs(:token).returns('the_token')
-
       message = 'created_at_timestamp' + @gateway.merchant + @gateway.sub_id.to_s
       @gateway.expects(:token_code).with(message).returns('the_token_code')
 
@@ -225,6 +223,29 @@ module IdealTestCases
       })
 
       @gateway.send(:build_directory_request_body)
+    end
+    
+    def test_builds_a_status_request_body
+      options = { :transaction_id => '0001023456789112' }
+
+      message = 'created_at_timestamp' + @gateway.merchant + @gateway.sub_id.to_s + options[:transaction_id]
+      @gateway.expects(:token_code).with(message).returns('the_token_code')
+
+      @gateway.expects(:xml_for).with(:acquirer_status_request, {
+        :created_at => 'created_at_timestamp',
+        :merchant => {
+          :merchant_id =>    @gateway.merchant,
+          :sub_id =>         @gateway.sub_id,
+          :authentication => IdealGateway::AUTHENTICATION_TYPE,
+          :token =>          'the_token',
+          :token_code =>     'the_token_code'
+        },
+        :transaction => {
+          :transaction_id => options[:transaction_id]
+        }
+      })
+
+      @gateway.send(:build_status_request_body, options)
     end
   end
 

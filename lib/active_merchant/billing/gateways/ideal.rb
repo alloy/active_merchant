@@ -158,6 +158,25 @@ module ActiveMerchant #:nodoc:
         })
       end
 
+      def build_status_request_body(options)
+        timestamp = created_at_timestamp
+        message = "#{timestamp}#{@merchant}#{@sub_id}#{options[:transaction_id]}"
+
+        xml_for(:acquirer_status_request, {
+          :created_at =>       timestamp,
+          :merchant => {
+            :merchant_id =>    @merchant,
+            :sub_id =>         @sub_id,
+            :authentication => AUTHENTICATION_TYPE,
+            :token =>          token,
+            :token_code =>     token_code(message)
+          },
+          :transaction => {
+            :transaction_id => options[:transaction_id]
+          }
+        })
+      end
+
       # Returns the +token+ as specified in section 2.8.4 of the iDeal specs.
       def token
         certificate = OpenSSL::X509::Certificate.new(File.read(@private_certificate))
@@ -185,6 +204,8 @@ module ActiveMerchant #:nodoc:
         case key
         when 'acquirer_transaction_request'
           'AcquirerTrxReq'
+        when 'acquirer_status_request'
+          'AcquirerStatusReq'
         when 'directory_request'
           'DirectoryReq'
         when 'issuer', 'merchant', 'transaction'
@@ -207,9 +228,7 @@ module ActiveMerchant #:nodoc:
       def xml_for(name, tags_and_values)
         xml = Builder::XmlMarkup.new
         xml.instruct!
-        xml.tag!(uglify_key(name), 'xmlns' => XML_NAMESPACE, 'version' => API_VERSION) do
-          xml_from_hash(xml, tags_and_values)
-        end
+        xml.tag!(uglify_key(name), 'xmlns' => XML_NAMESPACE, 'version' => API_VERSION) { xml_from_hash(xml, tags_and_values) }
         xml.target!
       end
 
@@ -218,11 +237,8 @@ module ActiveMerchant #:nodoc:
       def xml_from_hash(builder, tags_and_values)
         tags_and_values.each do |tag, value|
           tag = uglify_key(tag)
-
           if value.is_a?(Hash)
-            builder.tag!(tag) do
-              xml_from_hash(builder, value)
-            end
+            builder.tag!(tag) { xml_from_hash(builder, value) }
           else
             builder.tag!(tag, value)
           end
