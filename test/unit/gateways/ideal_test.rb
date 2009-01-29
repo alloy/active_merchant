@@ -102,27 +102,6 @@ module IdealTestCases
       assert_equal encoded_signature, @gateway.send(:token_code, message)
     end
 
-    def test_setup_purchase_valid_with_required_options
-      @gateway.stubs(:ssl_post)
-      @gateway.stubs(:build_transaction_request_body)
-      IdealTransactionResponse.stubs(:new)
-
-      assert_nothing_raised(ArgumentError) do
-        @gateway.setup_purchase(100, VALID_PURCHASE_OPTIONS)
-      end
-    end
-
-    def test_setup_purchase_raises_ArgumentError_with_missing_required_options
-      options = VALID_PURCHASE_OPTIONS.dup
-      options.keys.each do |key|
-        options.delete(key)
-
-        assert_raise(ArgumentError) do
-          @gateway.setup_purchase(100, options)
-        end
-      end
-    end
-
     def test_post_data_posts_with_ssl_to_acquirer_url
       @gateway.expects(:ssl_post).with(@gateway.acquirer_url, 'data')
       @gateway.send(:post_data, 'data')
@@ -161,6 +140,20 @@ module IdealTestCases
 
       @gateway.stubs(:created_at_timestamp).returns('created_at_timestamp')
       @gateway.stubs(:token).returns('the_token')
+      @gateway.stubs(:token_code)
+
+      @transaction_id = '0001023456789112'
+    end
+
+    def test_build_transaction_request_body_raises_ArgumentError_with_missing_required_options
+      options = VALID_PURCHASE_OPTIONS.dup
+      options.keys.each do |key|
+        options.delete(key)
+
+        assert_raise(ArgumentError) do
+          @gateway.send(:build_transaction_request_body, 100, options)
+        end
+      end
     end
 
     def test_builds_a_transaction_request_body
@@ -224,9 +217,15 @@ module IdealTestCases
 
       @gateway.send(:build_directory_request_body)
     end
-    
+
+    def test_builds_a_status_request_body_raises_ArgumentError_with_missing_required_options
+      assert_raise(ArgumentError) do
+        @gateway.send(:build_status_request_body, {})
+      end
+    end
+
     def test_builds_a_status_request_body
-      options = { :transaction_id => '0001023456789112' }
+      options = { :transaction_id => @transaction_id }
 
       message = 'created_at_timestamp' + @gateway.merchant + @gateway.sub_id.to_s + options[:transaction_id]
       @gateway.expects(:token_code).with(message).returns('the_token_code')

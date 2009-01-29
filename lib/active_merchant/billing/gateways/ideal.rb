@@ -94,7 +94,6 @@ module ActiveMerchant #:nodoc:
       end
 
       def setup_purchase(money, options)
-        requires!(options, :issuer_id, :expiration_period, :return_url, :order_id, :currency, :description, :entrance_code)
         IdealTransactionResponse.new post_data(build_transaction_request_body(money, options))
       end
 
@@ -120,6 +119,8 @@ module ActiveMerchant #:nodoc:
       end
 
       def build_transaction_request_body(money, options)
+        requires!(options, :issuer_id, :expiration_period, :return_url, :order_id, :currency, :description, :entrance_code)
+
         timestamp = created_at_timestamp
         message = timestamp +
                   options[:issuer_id] +
@@ -159,6 +160,8 @@ module ActiveMerchant #:nodoc:
       end
 
       def build_status_request_body(options)
+        requires!(options, :transaction_id)
+
         timestamp = created_at_timestamp
         message = "#{timestamp}#{@merchant}#{@sub_id}#{options[:transaction_id]}"
 
