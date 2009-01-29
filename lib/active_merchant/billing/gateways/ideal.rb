@@ -97,6 +97,10 @@ module ActiveMerchant #:nodoc:
         IdealTransactionResponse.new post_data(build_transaction_request_body(money, options))
       end
 
+      def capture(transaction_id)
+        IdealStatusResponse.new post_data(build_status_request_body(:transaction_id => transaction_id))
+      end
+
       private
 
       def post_data(data)

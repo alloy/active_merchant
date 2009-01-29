@@ -300,12 +300,12 @@ module IdealTestCases
     end
   end
 
-  class PurchaseTest < Test::Unit::TestCase
+  class SetupPurchaseTest < Test::Unit::TestCase
     def setup
       @gateway = IdealGateway.new(IDEAL_MERCHANT_OPTIONS)
 
       @gateway.stubs(:build_transaction_request_body).with(4321, VALID_PURCHASE_OPTIONS).returns('the request body')
-      @gateway.expects(:post_data).with('the request body').returns(ACQUIERER_TRANSACTION_RESPONSE)
+      @gateway.expects(:post_data).with('the request body').returns(ACQUIRER_TRANSACTION_RESPONSE)
 
       @setup_purchase_response = @gateway.setup_purchase(4321, VALID_PURCHASE_OPTIONS)
     end
@@ -321,6 +321,33 @@ module IdealTestCases
     def test_setup_purchase_returns_response_with_transaction_and_purchase_ids
       assert_equal '0001023456789112', @setup_purchase_response.transaction_id
       assert_equal 'iDEAL-aankoop 21', @setup_purchase_response.purchase_id
+    end
+  end
+
+  class CapturePurchaseTest < Test::Unit::TestCase
+    def setup
+      @gateway = IdealGateway.new(IDEAL_MERCHANT_OPTIONS)
+
+      @gateway.stubs(:build_status_request_body).with(:transaction_id => '0001023456789112').returns('the request body')
+    end
+
+    def test_setup_purchase_returns_IdealStatusResponse
+      @gateway.expects(:post_data).with('the request body').returns(ACQUIRER_SUCCEEDED_STATUS_RESPONSE)
+      assert_instance_of IdealStatusResponse, @gateway.capture('0001023456789112')
+    end
+
+    def test_capture_of_successful_payment
+      @gateway.expects(:post_data).with('the request body').returns(ACQUIRER_SUCCEEDED_STATUS_RESPONSE)
+      capture_response = @gateway.capture('0001023456789112')
+
+      assert capture_response.success?
+    end
+
+    def test_capture_of_failed_payment
+      @gateway.expects(:post_data).with('the request body').returns(ACQUIRER_FAILED_STATUS_RESPONSE)
+      capture_response = @gateway.capture('0001023456789112')
+
+      assert !capture_response.success?
     end
   end
 
@@ -413,7 +440,7 @@ F9W/Kcx2+xEaZ0Xbb4ZCd9cj9cBtmUqb51CwhZkYxIP+9pCPeA==
   </Directory>
 </DirectoryRes>}
 
-  ACQUIERER_TRANSACTION_RESPONSE = %{<?xml version="1.0" encoding="UTF-8"?>
+  ACQUIRER_TRANSACTION_RESPONSE = %{<?xml version="1.0" encoding="UTF-8"?>
 <AcquirerTrxRes xmlns="http://www.idealdesk.com/Message" version="1.1.0">
   <createDateTimeStamp>2001-12-17T09:30:47.0Z</createDateTimeStamp>
   <Acquirer>
@@ -427,6 +454,44 @@ F9W/Kcx2+xEaZ0Xbb4ZCd9cj9cBtmUqb51CwhZkYxIP+9pCPeA==
      <purchaseID>iDEAL-aankoop 21</purchaseID>
   </Transaction>
 </AcquirerTrxRes>}
+
+  ACQUIRER_SUCCEEDED_STATUS_RESPONSE = %{<?xml version="1.0" encoding="UTF-8"?>
+<AcquirerStatusRes xmlns="http://www.idealdesk.com/Message" version="1.1.0">
+  <createDateTimeStamp>2001-12-17T09:30:47.0Z</createDateTimeStamp>
+  <Acquirer>
+     <acquirerID>1234</acquirerID>
+  </Acquirer>
+  <Transaction>
+     <transactionID>0001023456789112</transactionID>
+     <status>Success</status>
+     <consumerName>Onderheuvel</consumerName>
+     <consumerAccountNumber>0949298989</consumerAccountNumber>
+     <consumerCity>DEN HAAG</consumerCity>
+  </Transaction>
+  <Signature>
+    <signatureValue>db82/jpJRvKQKoiDvu33X0yoDAQpayJOaW2Y8zbR1qk1i3epvTXi+6g+QVBY93YzGv4w+Va+vL3uNmzyRjYsm2309d1CWFVsn5Mk24NLSvhYfwVHEpznyMqizALEVUNSoiSHRkZUDfXowBAyLT/tQVGbuUuBj+TKblY826nRa7U=</signatureValue>
+    <fingerprint>1E15A00E3D7DF085768749D4ABBA3284794D8AE9</fingerprint>
+  </Signature>
+</AcquirerStatusRes>}
+
+  ACQUIRER_FAILED_STATUS_RESPONSE = %{<?xml version="1.0" encoding="UTF-8"?>
+<AcquirerStatusRes xmlns="http://www.idealdesk.com/Message" version="1.1.0">
+  <createDateTimeStamp>2001-12-17T09:30:47.0Z</createDateTimeStamp>
+  <Acquirer>
+     <acquirerID>1234</acquirerID>
+  </Acquirer>
+  <Transaction>
+     <transactionID>0001023456789112</transactionID>
+     <status>Failed</status>
+     <consumerName>Onderheuvel</consumerName>
+     <consumerAccountNumber>0949298989</consumerAccountNumber>
+     <consumerCity>DEN HAAG</consumerCity>
+  </Transaction>
+  <Signature>
+    <signatureValue>db82/jpJRvKQKoiDvu33X0yoDAQpayJOaW2Y8zbR1qk1i3epvTXi+6g+QVBY93YzGv4w+Va+vL3uNmzyRjYsm2309d1CWFVsn5Mk24NLSvhYfwVHEpznyMqizALEVUNSoiSHRkZUDfXowBAyLT/tQVGbuUuBj+TKblY826nRa7U=</signatureValue>
+    <fingerprint>1E15A00E3D7DF085768749D4ABBA3284794D8AE9</fingerprint>
+  </Signature>
+</AcquirerStatusRes>}
 
   ERROR_RESPONSE = %{<?xml version="1.0" encoding="UTF-8"?>
 <ErrorRes xmlns="http://www.idealdesk.com/Message" version="1.1.0">
