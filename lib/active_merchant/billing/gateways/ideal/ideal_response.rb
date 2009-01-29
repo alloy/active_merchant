@@ -11,7 +11,14 @@ module ActiveMerchant #:nodoc:
 
         @success = true if @success.nil?
       end
-      
+
+      def error_message
+        unless success?
+          error = @params['ErrorRes']['Error']
+          { :system => error['errorMessage'], :human => error['consumerMessage'] }
+        end
+      end
+
       # def service_url
       #   @params.values[0]['Issuer']['issuerAuthenticationURL']
       # end

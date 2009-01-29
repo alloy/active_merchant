@@ -247,7 +247,7 @@ module IdealTestCases
     end
   end
 
-  class ResponseTest < Test::Unit::TestCase
+  class SuccessfulResponseTest < Test::Unit::TestCase
     def setup
       @response = IdealResponse.new(DIRECTORY_RESPONSE)
     end
@@ -256,12 +256,8 @@ module IdealTestCases
       assert_equal Hash.from_xml(DIRECTORY_RESPONSE), @response.params
     end
 
-    def test_successful_if_no_error_xml_was_returned
+    def test_successful
       assert @response.success?
-    end
-
-    def test_unsuccessful_if_error_xml_was_returned
-      assert !IdealResponse.new(ERROR_RESPONSE).success?
     end
 
     def test_IdealDirectoryResponse_returns_list_of_issuers
@@ -274,6 +270,21 @@ module IdealTestCases
       ]
 
       assert_equal expected_issuers, IdealDirectoryResponse.new(DIRECTORY_RESPONSE).list
+    end
+  end
+
+  class UnsuccessfulResponse < Test::Unit::TestCase
+    def setup
+      @response = IdealResponse.new(ERROR_RESPONSE)
+    end
+
+    def test_unsuccessful
+      assert !@response.success?
+    end
+
+    def test_returns_error_messages
+      assert_equal 'Failure in system', @response.error_message[:system]
+      assert_equal 'Betalen met iDEAL is nu niet mogelijk.', @response.error_message[:human]
     end
   end
 
@@ -375,7 +386,7 @@ F9W/Kcx2+xEaZ0Xbb4ZCd9cj9cBtmUqb51CwhZkYxIP+9pCPeA==
     <errorDetail>System generating error: issuer</errorDetail>
     <suggestedAction></suggestedAction>
     <suggestedExpirationPeriod></suggestedExpirationPeriod>
-    <consumerMessage>Betalen met iDEAL is nu niet mogelijk. Probeer het later nogmaals of betaal op een andere manier.</consumerMessage>
+    <consumerMessage>Betalen met iDEAL is nu niet mogelijk.</consumerMessage>
   </Error>
 </ErrorRes>}
 end
