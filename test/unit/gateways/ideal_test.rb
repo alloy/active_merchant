@@ -118,7 +118,7 @@ module IdealTestCases
     end
   end
 
-  class RequestTest < Test::Unit::TestCase
+  class RequestBodyBuildingTest < Test::Unit::TestCase
     def setup
       @gateway = IdealGateway.new(DEFAULT_IDEAL_OPTIONS)
 
@@ -221,7 +221,63 @@ module IdealTestCases
     end
   end
 
-  CERTIFICATE = %{-----BEGIN CERTIFICATE----- 
+  class RequestTest < Test::Unit::TestCase
+    def setup
+      @gateway = IdealGateway.new(DEFAULT_IDEAL_OPTIONS)
+
+      @valid_options = {
+        :issuer_id         => '0001',
+        :expiration_period => 'PT10M',
+        :return_url        => 'http://return_to.example.com',
+        :order_id          => '1234567890123456',
+        :currency          => 'EUR',
+        :description       => 'A classic Dutch windmill for in the garden',
+        :entrance_code     => '1234'
+      }
+    end
+
+    def test_returns_IdealDirectoryResponse_from_issuers
+      @gateway.stubs(:build_directory_request_body).returns('the request body')
+      @gateway.expects(:ssl_post).with(@gateway.send(:acquirer_url), 'the request body').returns('the response body')
+
+      response = IdealDirectoryResponse.new(DIRECTORY_RESPONSE)
+      IdealDirectoryResponse.expects(:new).with('the response body').returns(response)
+
+      assert_equal response, @gateway.issuers
+    end
+  end
+
+  class ResponseTest < Test::Unit::TestCase
+    def setup
+      @response = IdealResponse.new(DIRECTORY_RESPONSE)
+    end
+
+    def test_initializes_with_only_response_body
+      assert_equal Hash.from_xml(DIRECTORY_RESPONSE), @response.params
+    end
+
+    def test_successful_if_no_error_xml_was_returned
+      assert @response.success?
+    end
+
+    def test_unsuccessful_if_error_xml_was_returned
+      assert !IdealResponse.new(ERROR_RESPONSE).success?
+    end
+
+    def test_IdealDirectoryResponse_returns_list_of_issuers
+      expected_issuers = [
+        { :id => '1006', :name => 'ABN AMRO Bank' },
+        { :id => '1003', :name => 'Postbank' },
+        { :id => '1005', :name => 'Rabobank' },
+        { :id => '1017', :name => 'Asr bank' },
+        { :id => '1023', :name => 'Van Lanschot' }
+      ]
+
+      assert_equal expected_issuers, IdealDirectoryResponse.new(DIRECTORY_RESPONSE).list
+    end
+  end
+
+  CERTIFICATE = %{-----BEGIN CERTIFICATE-----
 MIIEAzCCA3CgAwIBAgIQMIEnzk1UPrPDLOY9dc2cUjANBgkqhkiG9w0BAQUFADBf
 MQswCQYDVQQGEwJVUzEgMB4GA1UEChMXUlNBIERhdGEgU2VjdXJpdHksIEluYy4x
 LjAsBgNVBAsTJVNlY3VyZSBTZXJ2ZXIgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkw
@@ -273,4 +329,53 @@ F227vz8UamHtd2Bmhw4k3Betsa1jqyt+ep1bQg6OrBRz/O8SocGZnZ46PLFb5hZR
 NQLHCf/L1gBj/VxVwwL7yjvYDVeBcDI6Pz7XrbJupqDL408UazzHdK4Y28OdDsHj
 F9W/Kcx2+xEaZ0Xbb4ZCd9cj9cBtmUqb51CwhZkYxIP+9pCPeA==
 -----END RSA PRIVATE KEY-----}
+
+  DIRECTORY_RESPONSE = %{<?xml version="1.0" encoding="UTF-8"?>
+<DirectoryRes xmlns="http://www.idealdesk.com/Message" version="1.1.0">
+  <createDateTimeStamp>2001-12-17T09:30:47.0Z</createDateTimeStamp>
+  <Acquirer>
+    <acquirerID>0245</acquirerID>
+  </Acquirer>
+  <Directory>
+    <directoryDateTimeStamp>2004-11-10T10:15:12.145Z</directoryDateTimeStamp>
+    <Issuer>
+      <issuerID>1006</issuerID>
+      <issuerName>ABN AMRO Bank</issuerName>
+      <issuerList>Short</issuerList>
+    </Issuer>
+    <Issuer>
+      <issuerID>1003</issuerID>
+      <issuerName>Postbank</issuerName>
+      <issuerList>Short</issuerList>
+    </Issuer>
+    <Issuer>
+      <issuerID>1005</issuerID>
+      <issuerName>Rabobank</issuerName>
+      <issuerList>Short</issuerList>
+    </Issuer>
+    <Issuer>
+      <issuerID>1017</issuerID>
+      <issuerName>Asr bank</issuerName>
+      <issuerList>Long</issuerList>
+    </Issuer>
+    <Issuer>
+      <issuerID>1023</issuerID>
+      <issuerName>Van Lanschot</issuerName>
+      <issuerList>Long</issuerList>
+    </Issuer>
+  </Directory>
+</DirectoryRes>}
+
+  ERROR_RESPONSE = %{<?xml version="1.0" encoding="UTF-8"?>
+<ErrorRes xmlns="http://www.idealdesk.com/Message" version="1.1.0">
+  <createDateTimeStamp>2001-12-17T09:30:47.0Z</createDateTimeStamp>
+  <Error>
+    <errorCode>SO1000</errorCode>
+    <errorMessage>Failure in system</errorMessage>
+    <errorDetail>System generating error: issuer</errorDetail>
+    <suggestedAction></suggestedAction>
+    <suggestedExpirationPeriod></suggestedExpirationPeriod>
+    <consumerMessage>Betalen met iDEAL is nu niet mogelijk. Probeer het later nogmaals of betaal op een andere manier.</consumerMessage>
+  </Error>
+</ErrorRes>}
 end

@@ -249,8 +249,8 @@ module ActiveMerchant #:nodoc:
         #   (TESTMODE) Successful Sale
         test_mode = test? || message =~ /TESTMODE/
 
-        Response.new(success?(response), message, response, 
-          :test => test_mode, 
+        Response.new(success?(response), message, response,
+          :test => test_mode,
           :authorization => response[:transaction_id],
           :fraud_review => fraud_review?(response),
           :avs_result => { :code => response[:avs_result_code] },
@@ -271,7 +271,7 @@ module ActiveMerchant #:nodoc:
 
         results = {
           :response_code => fields[RESPONSE_CODE].to_i,
-          :response_reason_code => fields[RESPONSE_REASON_CODE], 
+          :response_reason_code => fields[RESPONSE_REASON_CODE],
           :response_reason_text => fields[RESPONSE_REASON_TEXT],
           :avs_result_code => fields[AVS_RESULT_CODE],
           :transaction_id => fields[TRANSACTION_ID],

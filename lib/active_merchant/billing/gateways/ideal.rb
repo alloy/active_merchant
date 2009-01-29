@@ -82,7 +82,31 @@ module ActiveMerchant #:nodoc:
         super
       end
 
+      def issuers
+        IdealDirectoryResponse.new(ssl_post(acquirer_url, build_directory_request_body))
+      end
+
       private
+
+      #       def commit(request)
+      #         raw_response = ssl_post(acquirer_url, request)
+      #         response = Hash.from_xml(raw_response.to_s)
+      #         response_type = response.keys[0]
+      # 
+      #         case response_type
+      #           when 'AcquirerTrxRes', 'DirectoryRes'
+      #             success = true
+      #           when 'ErrorRes'
+      #             success = false
+      #           when 'AcquirerStatusRes'       
+      #             raise SecurityError, "Message verification failed.", caller unless status_response_verified? response
+      #             success = (response['AcquirerStatusRes']['Transaction']['status'] =="Success")
+      #           else
+      #             raise ArgumentError, "Unknown response type.", caller
+      #         end
+      #         
+      #         return IdealResponse.new(success, response.keys[0] , response, :test => test?)        
+      #       end
 
       def build_directory_request_body
         timestamp = created_at_timestamp
