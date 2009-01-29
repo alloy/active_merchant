@@ -53,6 +53,20 @@ module ActiveMerchant #:nodoc:
         return false if error_occured?
         @params['AcquirerStatusRes']['Transaction']['status'] == 'Success'
       end
+
+      # TODO:
+      #
+      #       def verify_message(cert_file, data, signature)
+      #         pub_key = OpenSSL::X509::Certificate.new(File.read(cert_file)).public_key
+      #         return pub_key.verify(OpenSSL::Digest::SHA1.new, Base64.decode64(signature), data)
+      #       end
+      #       
+      #       def status_response_verified?(response)
+      #         transaction = response['AcquirerStatusRes']['Transaction']
+      #         message = response['AcquirerStatusRes']["createDateTimeStamp" ] + transaction["transactionID" ] + transaction["status"] 
+      #         message = message + transaction['consumerAccountNumber'] unless transaction['consumerAccountNumber'].nil?
+      #         verify_message(@options[:ideal_cert],message,response['AcquirerStatusRes']["Signature"]["signatureValue"])
+      #       end
     end
 
     class IdealDirectoryResponse < IdealResponse
