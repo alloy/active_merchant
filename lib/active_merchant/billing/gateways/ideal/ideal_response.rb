@@ -19,9 +19,19 @@ module ActiveMerchant #:nodoc:
         @params['AcquirerTrxRes']['Issuer']['issuerAuthenticationURL']
       end
 
-      # def transaction
-      #   @params.values[0]['Transaction']
-      # end
+      def transaction_id
+        transaction['transactionID']
+      end
+
+      def purchase_id
+        transaction['purchaseID']
+      end
+
+      private
+
+      def transaction
+        @params['AcquirerTrxRes']['Transaction']
+      end
     end
 
     class IdealDirectoryResponse < IdealResponse
