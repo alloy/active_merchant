@@ -82,6 +82,13 @@ module ActiveMerchant #:nodoc:
         super
       end
 
+      # Returns the url of the according matching the current environment. When
+      # #test? returns +true+ the IdealGateway.test_url is used, otherwise the
+      # IdealGateway.live_url is used.
+      def acquirer_url
+        test? ? self.class.test_url : self.class.live_url
+      end
+
       def issuers
         IdealDirectoryResponse.new post_data(build_directory_request_body)
       end
@@ -149,13 +156,6 @@ module ActiveMerchant #:nodoc:
             :entrance_code =>       options[:entrance_code]
           }
         })
-      end
-
-      # Returns the url of the according matching the current environment. When
-      # #test? returns +true+ the IdealGateway.test_url is used, otherwise the
-      # IdealGateway.live_url is used.
-      def acquirer_url
-        test? ? self.class.test_url : self.class.live_url
       end
 
       # Returns the +token+ as specified in section 2.8.4 of the iDeal specs.

@@ -121,6 +121,11 @@ module IdealTestCases
         end
       end
     end
+
+    def test_post_data_posts_with_ssl_to_acquirer_url
+      @gateway.expects(:ssl_post).with(@gateway.acquirer_url, 'data')
+      @gateway.send(:post_data, 'data')
+    end
   end
 
   class XMLBuildingTest < Test::Unit::TestCase
@@ -259,7 +264,7 @@ module IdealTestCases
 
     def test_returns_list_of_issuers_from_response
       @gateway.stubs(:build_directory_request_body).returns('the request body')
-      @gateway.expects(:ssl_post).with(@gateway.send(:acquirer_url), 'the request body').returns(DIRECTORY_RESPONSE)
+      @gateway.expects(:post_data).with('the request body').returns(DIRECTORY_RESPONSE)
 
       expected_issuers = [
         { :id => '1006', :name => 'ABN AMRO Bank' },
@@ -280,7 +285,7 @@ module IdealTestCases
       @gateway = IdealGateway.new(IDEAL_MERCHANT_OPTIONS)
 
       @gateway.stubs(:build_transaction_request_body).with(4321, VALID_PURCHASE_OPTIONS).returns('the request body')
-      @gateway.expects(:ssl_post).with(@gateway.send(:acquirer_url), 'the request body').returns(ACQUIERER_TRANSACTION_RESPONSE)
+      @gateway.expects(:post_data).with('the request body').returns(ACQUIERER_TRANSACTION_RESPONSE)
 
       @setup_purchase_response = @gateway.setup_purchase(4321, VALID_PURCHASE_OPTIONS)
     end
