@@ -22,8 +22,8 @@ module IdealTestCases
     end
 
     def test_private_certificate_returns_a_loaded_Certificate_instance
-      assert_equal IdealGateway.private_certificate.serial,
-        OpenSSL::X509::Certificate.new(PRIVATE_CERTIFICATE).serial
+      assert_equal IdealGateway.private_certificate.to_text,
+        OpenSSL::X509::Certificate.new(PRIVATE_CERTIFICATE).to_text
     end
 
     def test_private_key_returns_a_loaded_PKey_RSA_instance
@@ -32,8 +32,8 @@ module IdealTestCases
     end
 
     def test_ideal_certificate_returns_a_loaded_Certificate_instance
-      assert_equal IdealGateway.ideal_certificate.serial,
-        OpenSSL::X509::Certificate.new(IDEAL_CERTIFICATE).serial
+      assert_equal IdealGateway.ideal_certificate.to_text,
+        OpenSSL::X509::Certificate.new(IDEAL_CERTIFICATE).to_text
     end
   end
 
@@ -345,6 +345,9 @@ module IdealTestCases
     end
 
     def test_capture_of_successful_payment
+      # Because we don't have a real private key and certificate we stub this to return true
+      IdealStatusResponse.any_instance.stubs(:response_verified?).returns(true)
+
       expects_request_and_returns ACQUIRER_SUCCEEDED_STATUS_RESPONSE
       capture_response = @gateway.capture('0001023456789112')
 
@@ -358,12 +361,12 @@ module IdealTestCases
       assert !capture_response.success?
     end
 
-    # def test_capture_of_successful_payment_but_message_does_not_match_signature
-    #   expects_request_and_returns ACQUIRER_SUCCEEDED_BUT_WRONG_SIGNATURE_STATUS_RESPONSE
-    #   capture_response = @gateway.capture('0001023456789112')
-    # 
-    #   assert !capture_response.success?
-    # end
+    def test_capture_of_successful_payment_but_message_does_not_match_signature
+      expects_request_and_returns ACQUIRER_SUCCEEDED_BUT_WRONG_SIGNATURE_STATUS_RESPONSE
+      capture_response = @gateway.capture('0001023456789112')
+
+      assert !capture_response.success?
+    end
     
     private
     

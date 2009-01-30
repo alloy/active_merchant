@@ -54,23 +54,30 @@ module ActiveMerchant #:nodoc:
 
       def transaction_successful?
         return false if error_occured?
-        @params['AcquirerStatusRes']['Transaction']['status'] == 'Success'
+        status == 'Success' && response_verified?
       end
-      
-      
-      # TODO:
-      #
-      #       def verify_message(cert_file, data, signature)
-      #         pub_key = OpenSSL::X509::Certificate.new(File.read(cert_file)).public_key
-      #         return pub_key.verify(OpenSSL::Digest::SHA1.new, Base64.decode64(signature), data)
-      #       end
-      #       
-      #       def status_response_verified?(response)
-      #         transaction = response['AcquirerStatusRes']['Transaction']
-      #         message = response['AcquirerStatusRes']["createDateTimeStamp" ] + transaction["transactionID" ] + transaction["status"] 
-      #         message = message + transaction['consumerAccountNumber'] unless transaction['consumerAccountNumber'].nil?
-      #         verify_message(@options[:ideal_cert],message,response['AcquirerStatusRes']["Signature"]["signatureValue"])
-      #       end
+
+      def transaction
+        @params['AcquirerStatusRes']['Transaction']
+      end
+
+      def status
+        transaction['status']
+      end
+
+      def message
+        message = @params['AcquirerStatusRes']['createDateTimeStamp'] + transaction['transactionID'] + status
+        message += transaction['consumerAccountNumber'] if transaction['consumerAccountNumber']
+        message
+      end
+
+      def signature
+        Base64.decode64(@params['AcquirerStatusRes']['Signature']['signatureValue'])
+      end
+
+      def response_verified?
+        IdealGateway.ideal_certificate.public_key.verify(OpenSSL::Digest::SHA1.new, signature, message)
+      end
     end
 
     class IdealDirectoryResponse < IdealResponse
