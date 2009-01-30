@@ -1,3 +1,6 @@
+require 'openssl'
+require 'base64'
+
 module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     class IdealResponse < Response
@@ -53,7 +56,8 @@ module ActiveMerchant #:nodoc:
         return false if error_occured?
         @params['AcquirerStatusRes']['Transaction']['status'] == 'Success'
       end
-
+      
+      
       # TODO:
       #
       #       def verify_message(cert_file, data, signature)
