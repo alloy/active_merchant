@@ -336,7 +336,8 @@ module IdealTestCases
     def setup
       @gateway = IdealGateway.new
 
-      @gateway.stubs(:build_status_request_body).with(:transaction_id => '0001023456789112').returns('the request body')
+      @gateway.stubs(:build_status_request_body).
+        with(:transaction_id => '0001023456789112').returns('the request body')
     end
 
     def test_setup_purchase_returns_IdealStatusResponse
@@ -344,8 +345,11 @@ module IdealTestCases
       assert_instance_of IdealStatusResponse, @gateway.capture('0001023456789112')
     end
 
+    # Because we don't have a real private key and certificate we stub response_verified? to return true.
+    #
+    # TODO: Get this to run without cheating… But first we'll do the integration tests which should make
+    # make it easier to think of a good way to solve this.
     def test_capture_of_successful_payment
-      # Because we don't have a real private key and certificate we stub this to return true
       IdealStatusResponse.any_instance.stubs(:response_verified?).returns(true)
 
       expects_request_and_returns ACQUIRER_SUCCEEDED_STATUS_RESPONSE

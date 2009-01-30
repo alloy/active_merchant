@@ -161,6 +161,9 @@ module ActiveMerchant #:nodoc:
       end
 
       # Returns the +token+ as specified in section 2.8.4 of the iDeal specs.
+      #
+      # This is the params['AcquirerStatusRes']['Signature']['fingerprint'] in
+      # a IdealStatusResponse instance.
       def token
         Digest::SHA1.hexdigest(self.class.private_certificate.to_der).upcase
       end
