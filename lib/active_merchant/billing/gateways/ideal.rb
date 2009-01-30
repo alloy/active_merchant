@@ -130,6 +130,10 @@ module ActiveMerchant #:nodoc:
       # Defaults to 0.
       attr_reader :sub_id
 
+      # Initializes a new IdealGateway instance.
+      #
+      # You can optionally specify <tt>:sub_id</tt> if applicable. It defaults
+      # to 0.
       def initialize(options = {})
         @sub_id = options[:sub_id] || 0
         super
@@ -142,14 +146,22 @@ module ActiveMerchant #:nodoc:
         test? ? self.class.test_url : self.class.live_url
       end
 
+      # Sends a Directory Request to the acquirer and returns an
+      # IdealDirectoryResponse with the #list of issuers.
       def issuers
         IdealDirectoryResponse.new post_data(build_directory_request_body)
       end
 
+      # Starts a purchase by sending an acquirer transaction request
+      # (AcquirerTrxReq) and returns an IdealTransactionResponse with the
+      # #purchase_id and #transaction_id which is needed for the capture step.
       def setup_purchase(money, options)
         IdealTransactionResponse.new post_data(build_transaction_request_body(money, options))
       end
 
+      # Sends a acquirer status request for the specified +transaction_id+ and
+      # returns an IdealStatusResponse which returns whether or not the
+      # transaction was a #success?.
       def capture(transaction_id)
         IdealStatusResponse.new post_data(build_status_request_body(:transaction_id => transaction_id))
       end
