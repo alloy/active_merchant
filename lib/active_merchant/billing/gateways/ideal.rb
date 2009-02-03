@@ -5,6 +5,31 @@ require 'net/https'
 require 'base64'
 require 'digest/sha1'
 
+# Which should you use from your bank:
+# ABN AMRO: iDEAL Zelfbouw (Do-it-yourself)
+# ING: iDEAL Advanced
+
+# NOTES:
+
+# The iDEAL Reference Guide states that the redirect to the issuer has to take place within the 
+# browser window in which the consumer has clicked on the Pay button. The acceptor’s entire page 
+# has to be replaced by the selected issuer's entire page. It is therefore not allowed to use a second
+# browser window (pop-ups) or frames.
+
+# If the status of a transaction is unknown, or is equal to Open, you have the following options for 
+# getting the status:
+#
+#   - Perform a status request ‘manually’ for a certain transactionID. This requires 
+#   implementing a function in the online shop which allows the acceptor to launch a status 
+#   request for an individual transaction for a given transactionId.
+#
+#   - Perform automated periodic status requests for all transactions that have not yet been 
+#   completed. Here, the same guidelines apply as for requesting a single transaction status 
+#   ‘manually’.
+#
+#   - Perform a status request automatically after the end of the expirationPeriod. In this case, 
+#   see also the last page of section 3.3.1 of the Reference Guide.
+
 #     # First, make sure you have everything setup correctly and all of your dependencies in place with:
 #     # 
 #     #   require 'rubygems'
@@ -169,7 +194,12 @@ module ActiveMerchant #:nodoc:
       private
 
       def post_data(data)
-        ssl_post(acquirer_url, data)
+        puts "POSTING:"
+        puts data
+        res = ssl_post(acquirer_url, data)
+        puts "\nRESPONSE:"
+        puts res
+        res
       end
 
       # Returns the +token+ as specified in section 2.8.4 of the iDeal specs.

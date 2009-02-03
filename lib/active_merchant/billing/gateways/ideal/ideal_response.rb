@@ -7,6 +7,7 @@ module ActiveMerchant #:nodoc:
     class IdealResponse < Response
       def initialize(response_body)
         @params = Hash.from_xml(response_body)
+        p @params
         @success = !error_occured?
       end
 
