@@ -7,7 +7,6 @@ module ActiveMerchant #:nodoc:
     class IdealResponse < Response
       def initialize(response_body)
         @params = Hash.from_xml(response_body)
-        p @params
         @success = !error_occured?
       end
 
@@ -18,15 +17,15 @@ module ActiveMerchant #:nodoc:
       # might be preferable to provide your own.
       def error_message
         unless success?
-          error = @params['ErrorRes']['Error']
-          { :system => error['errorMessage'], :human => error['consumerMessage'] }
+          error = @params['error_res']['error']
+          { :system => error['error_message'], :human => error['consumer_message'] }
         end
       end
 
       private
 
       def error_occured?
-        @params.keys.first == 'ErrorRes'
+        @params.keys.first == 'error_res'
       end
     end
 
@@ -40,24 +39,24 @@ module ActiveMerchant #:nodoc:
       # Returns the url to where the user should be redirected to perform the
       # transaction.
       def service_url
-        @params['AcquirerTrxRes']['Issuer']['issuerAuthenticationURL']
+        @params['acquirer_trx_res']['issuer']['issuer_authentication_url']
       end
 
       # Returns the transaction ID which is needed for requesting the status
       # of a transaction.
       def transaction_id
-        transaction['transactionID']
+        transaction['transaction_id']
       end
 
       # Returns the purchase ID for this transaction.
       def purchase_id
-        transaction['purchaseID']
+        transaction['purchase_id']
       end
 
       private
 
       def transaction
-        @params['AcquirerTrxRes']['Transaction']
+        @params['acquirer_trx_res']['transaction']
       end
     end
 
@@ -78,7 +77,7 @@ module ActiveMerchant #:nodoc:
       end
 
       def transaction
-        @params['AcquirerStatusRes']['Transaction']
+        @params['acquirer_status_res']['transaction']
       end
 
       def status
@@ -86,13 +85,13 @@ module ActiveMerchant #:nodoc:
       end
 
       def message
-        message = @params['AcquirerStatusRes']['createDateTimeStamp'] + transaction['transactionID'] + status
-        message += transaction['consumerAccountNumber'] if transaction['consumerAccountNumber']
+        message = @params['acquirer_status_res']['create_date_time_stamp'] + transaction['transaction_id'] + status
+        message += transaction['consumer_account_number'] if transaction['consumer_account_number']
         message
       end
 
       def signature
-        Base64.decode64(@params['AcquirerStatusRes']['Signature']['signatureValue'])
+        Base64.decode64(@params['acquirer_status_res']['signature']['signature_value'])
       end
 
       # Verifies that the signature matches the IdealGateway.ideal_certificate.
@@ -109,8 +108,11 @@ module ActiveMerchant #:nodoc:
       #
       #   gateway.issuers.list # => [{ :id => '1006', :name => 'ABN AMRO Bank' }]
       def list
-        @params['DirectoryRes']['Directory']['Issuer'].map do |issuer|
-          { :id => issuer['issuerID'], :name => issuer['issuerName'] }
+        issuers = @params['directory_res']['directory']['issuer']
+        issuers = [issuers] unless issuers.is_a?(Array)
+
+        issuers.map do |issuer|
+          { :id => issuer['issuer_id'], :name => issuer['issuer_name'] }
         end
       end
     end

@@ -44,15 +44,9 @@ class IdealTest < Test::Unit::TestCase
     #   :entrance_code => '1234'
     # }
   end
-  
+
   def test_issuers
-    response = @gateway.issuers
-    list = response.list
-  
-    assert_equal 1, list.length
-    assert_equal "Issuer Simulator", list[0][ "issuerName" ]
-    assert_equal "0151", list[0]["issuerID"]
-    assert_equal "Short", list[0]["issuerList"]
+    assert_equal [{ :id => '0151', :name => 'Issuer Simulator' }], @gateway.issuers.list
   end
 
   # def test_set_purchase

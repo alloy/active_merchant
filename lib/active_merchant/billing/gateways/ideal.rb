@@ -194,11 +194,11 @@ module ActiveMerchant #:nodoc:
       private
 
       def post_data(data)
-        puts "POSTING:"
-        puts data
+        # puts "POSTING:"
+        # puts data
         res = ssl_post(acquirer_url, data)
-        puts "\nRESPONSE:"
-        puts res
+        # puts "\nRESPONSE:"
+        # puts res
         res
       end
 
@@ -213,7 +213,7 @@ module ActiveMerchant #:nodoc:
       # Creates a +tokenCode+ from the specified +message+.
       def token_code(message)
         signature = self.class.private_key.sign(OpenSSL::Digest::SHA1.new, message.gsub(/\s/m, ''))
-        Base64.encode64(signature).strip
+        Base64.encode64(signature).gsub(/\s/m, '')
       end
 
       # Returns a string containing the current UTC time, formatted as per the
@@ -254,17 +254,17 @@ module ActiveMerchant #:nodoc:
       def xml_for(name, tags_and_values)
         xml = Builder::XmlMarkup.new
         xml.instruct!
-        xml.tag!(uglify_key(name), 'xmlns' => XML_NAMESPACE, 'version' => API_VERSION) { xml_from_hash(xml, tags_and_values) }
+        xml.tag!(uglify_key(name), 'xmlns' => XML_NAMESPACE, 'version' => API_VERSION) { xml_from_array(xml, tags_and_values) }
         xml.target!
       end
 
       # Recursively creates xml for a given hash of tag-value pair. Uses
       # uglify_key on the tags to create the tags needed by iDeal.
-      def xml_from_hash(builder, tags_and_values)
+      def xml_from_array(builder, tags_and_values)
         tags_and_values.each do |tag, value|
           tag = uglify_key(tag)
-          if value.is_a?(Hash)
-            builder.tag!(tag) { xml_from_hash(builder, value) }
+          if value.is_a?(Array)
+            builder.tag!(tag) { xml_from_array(builder, value) }
           else
             builder.tag!(tag, value)
           end
@@ -277,34 +277,36 @@ module ActiveMerchant #:nodoc:
         timestamp = created_at_timestamp
         message = "#{timestamp}#{self.class.merchant_id}#{@sub_id}#{options[:transaction_id]}"
 
-        xml_for(:acquirer_status_request, {
-          :created_at =>       timestamp,
-          :merchant => {
-            :merchant_id =>    self.class.merchant_id,
-            :sub_id =>         @sub_id,
-            :authentication => AUTHENTICATION_TYPE,
-            :token =>          token,
-            :token_code =>     token_code(message)
-          },
-          :transaction => {
-            :transaction_id => options[:transaction_id]
-          }
-        })
+        xml_for(:acquirer_status_request, [
+          [:created_at,       timestamp],
+          [:merchant, [
+            [:merchant_id,    self.class.merchant_id],
+            [:sub_id,         @sub_id],
+            [:authentication, AUTHENTICATION_TYPE],
+            [:token,          token],
+            [:token_code,     token_code(message)]
+          ]],
+
+          [:transaction, [
+            [:transaction_id, options[:transaction_id]]
+          ]]
+        ])
       end
 
       def build_directory_request_body
         timestamp = created_at_timestamp
+        message = "#{timestamp}#{self.class.merchant_id}#{@sub_id}"
 
-        xml_for(:directory_request, {
-          :created_at => timestamp,
-          :merchant => {
-            :merchant_id =>    self.class.merchant_id,
-            :sub_id =>         @sub_id,
-            :authentication => AUTHENTICATION_TYPE,
-            :token =>          token,
-            :token_code =>     token_code("#{timestamp}#{self.class.merchant_id}#{@sub_id}")
-          }
-        })
+        xml_for(:directory_request, [
+          [:created_at,       timestamp],
+          [:merchant, [
+            [:merchant_id,    self.class.merchant_id],
+            [:sub_id,         @sub_id],
+            [:authentication, AUTHENTICATION_TYPE],
+            [:token,          token],
+            [:token_code,     token_code(message)]
+          ]]
+        ])
       end
 
       def build_transaction_request_body(money, options)
@@ -322,30 +324,30 @@ module ActiveMerchant #:nodoc:
                   LANGUAGE +
                   options[:description] +
                   options[:entrance_code]
+        
+        xml_for(:acquirer_transaction_request, [
+          [:created_at, timestamp],
+          [:issuer, [[:issuer_id, options[:issuer_id]]]],
 
-        xml_for(:acquirer_transaction_request, {
-          :created_at => timestamp,
-          :issuer => { :issuer_id => options[:issuer_id] },
+          [:merchant, [
+            [:merchant_id,         self.class.merchant_id],
+            [:sub_id,              @sub_id],
+            [:authentication,      AUTHENTICATION_TYPE],
+            [:token,               token],
+            [:token_code,          token_code(message)],
+            [:merchant_return_url, options[:return_url]]
+          ]],
 
-          :merchant => {
-            :merchant_id =>         self.class.merchant_id,
-            :sub_id =>              @sub_id,
-            :authentication =>      AUTHENTICATION_TYPE,
-            :token =>               token,
-            :token_code =>          token_code(message),
-            :merchant_return_url => options[:return_url]
-          },
-
-          :transaction => {
-            :purchase_id =>         options[:order_id],
-            :amount =>              money,
-            :currency =>            options[:currency],
-            :expiration_period =>   options[:expiration_period],
-            :language =>            LANGUAGE,
-            :description =>         options[:description],
-            :entrance_code =>       options[:entrance_code]
-          }
-        })
+          [:transaction, [
+            [:purchase_id,       options[:order_id]],
+            [:amount,            money],
+            [:currency,          options[:currency]],
+            [:expiration_period, options[:expiration_period]],
+            [:language,          LANGUAGE],
+            [:description,       options[:description]],
+            [:entrance_code,     options[:entrance_code]]
+          ]]
+        ])
       end
 
     end

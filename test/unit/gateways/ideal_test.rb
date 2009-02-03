@@ -105,7 +105,7 @@ module IdealTestCases
       OpenSSL::Digest::SHA1.stubs(:new).returns(sha1)
 
       signature = IdealGateway.private_key.sign(sha1, stripped_message)
-      encoded_signature = Base64.encode64(signature).strip
+      encoded_signature = Base64.encode64(signature).strip.gsub(/\n/, '')
 
       assert_equal encoded_signature, @gateway.send(:token_code, message)
     end
@@ -126,10 +126,10 @@ module IdealTestCases
       expected_xml.instruct!
       expected_xml.tag!('AcquirerTrxReq', 'xmlns' => IdealGateway::XML_NAMESPACE, 'version' => IdealGateway::API_VERSION) {}
 
-      assert_equal expected_xml.target!, @gateway.send(:xml_for, :acquirer_transaction_request, {})
+      assert_equal expected_xml.target!, @gateway.send(:xml_for, :acquirer_transaction_request, [])
     end
 
-    def test_creates_correct_xml_from_hash_with_ugly_keys
+    def test_creates_correct_xml_from_array_with_ugly_keys
       expected_xml = Builder::XmlMarkup.new
       expected_xml.instruct!
       expected_xml.tag!('AcquirerTrxReq', 'xmlns' => IdealGateway::XML_NAMESPACE, 'version' => IdealGateway::API_VERSION) do
@@ -138,7 +138,7 @@ module IdealTestCases
         end
       end
 
-      assert_equal expected_xml.target!, @gateway.send(:xml_for, :acquirer_transaction_request, :a_parent => { :created_at => '2009-01-26' })
+      assert_equal expected_xml.target!, @gateway.send(:xml_for, :acquirer_transaction_request, [[:a_parent, [[:created_at, '2009-01-26']]]])
     end
   end
 
@@ -181,29 +181,29 @@ module IdealTestCases
 
       @gateway.expects(:token_code).with(message).returns('the_token_code')
 
-      @gateway.expects(:xml_for).with(:acquirer_transaction_request, {
-        :created_at => 'created_at_timestamp',
-        :issuer => { :issuer_id => VALID_PURCHASE_OPTIONS[:issuer_id] },
+      @gateway.expects(:xml_for).with(:acquirer_transaction_request, [
+        [:created_at, 'created_at_timestamp'],
+        [:issuer, [[:issuer_id, VALID_PURCHASE_OPTIONS[:issuer_id]]]],
 
-        :merchant => {
-          :merchant_id =>         IdealGateway.merchant_id,
-          :sub_id =>              @gateway.sub_id,
-          :authentication =>      IdealGateway::AUTHENTICATION_TYPE,
-          :token =>               'the_token',
-          :token_code =>          'the_token_code',
-          :merchant_return_url => VALID_PURCHASE_OPTIONS[:return_url]
-        },
+        [:merchant, [
+          [:merchant_id,         IdealGateway.merchant_id],
+          [:sub_id,              @gateway.sub_id],
+          [:authentication,      IdealGateway::AUTHENTICATION_TYPE],
+          [:token,               'the_token'],
+          [:token_code,          'the_token_code'],
+          [:merchant_return_url, VALID_PURCHASE_OPTIONS[:return_url]]
+        ]],
 
-        :transaction => {
-          :purchase_id =>       VALID_PURCHASE_OPTIONS[:order_id],
-          :amount =>            money,
-          :currency =>          VALID_PURCHASE_OPTIONS[:currency],
-          :expiration_period => VALID_PURCHASE_OPTIONS[:expiration_period],
-          :language =>          IdealGateway::LANGUAGE,
-          :description =>       VALID_PURCHASE_OPTIONS[:description],
-          :entrance_code =>     VALID_PURCHASE_OPTIONS[:entrance_code]
-        }
-      })
+        [:transaction, [
+          [:purchase_id,       VALID_PURCHASE_OPTIONS[:order_id]],
+          [:amount,            money],
+          [:currency,          VALID_PURCHASE_OPTIONS[:currency]],
+          [:expiration_period, VALID_PURCHASE_OPTIONS[:expiration_period]],
+          [:language,          IdealGateway::LANGUAGE],
+          [:description,       VALID_PURCHASE_OPTIONS[:description]],
+          [:entrance_code,     VALID_PURCHASE_OPTIONS[:entrance_code]]
+        ]]
+      ])
 
       @gateway.send(:build_transaction_request_body, money, VALID_PURCHASE_OPTIONS)
     end
@@ -212,16 +212,16 @@ module IdealTestCases
       message = 'created_at_timestamp' + IdealGateway.merchant_id + @gateway.sub_id.to_s
       @gateway.expects(:token_code).with(message).returns('the_token_code')
 
-      @gateway.expects(:xml_for).with(:directory_request, {
-        :created_at => 'created_at_timestamp',
-        :merchant => {
-          :merchant_id =>    IdealGateway.merchant_id,
-          :sub_id =>         @gateway.sub_id,
-          :authentication => IdealGateway::AUTHENTICATION_TYPE,
-          :token =>          'the_token',
-          :token_code =>     'the_token_code'
-        }
-      })
+      @gateway.expects(:xml_for).with(:directory_request, [
+        [:created_at, 'created_at_timestamp'],
+        [:merchant, [
+          [:merchant_id,    IdealGateway.merchant_id],
+          [:sub_id,         @gateway.sub_id],
+          [:authentication, IdealGateway::AUTHENTICATION_TYPE],
+          [:token,          'the_token'],
+          [:token_code,     'the_token_code']
+        ]]
+      ])
 
       @gateway.send(:build_directory_request_body)
     end
@@ -238,19 +238,20 @@ module IdealTestCases
       message = 'created_at_timestamp' + IdealGateway.merchant_id + @gateway.sub_id.to_s + options[:transaction_id]
       @gateway.expects(:token_code).with(message).returns('the_token_code')
 
-      @gateway.expects(:xml_for).with(:acquirer_status_request, {
-        :created_at => 'created_at_timestamp',
-        :merchant => {
-          :merchant_id =>    IdealGateway.merchant_id,
-          :sub_id =>         @gateway.sub_id,
-          :authentication => IdealGateway::AUTHENTICATION_TYPE,
-          :token =>          'the_token',
-          :token_code =>     'the_token_code'
-        },
-        :transaction => {
-          :transaction_id => options[:transaction_id]
-        }
-      })
+      @gateway.expects(:xml_for).with(:acquirer_status_request, [
+        [:created_at, 'created_at_timestamp'],
+        [:merchant, [
+          [:merchant_id,    IdealGateway.merchant_id],
+          [:sub_id,         @gateway.sub_id],
+          [:authentication, IdealGateway::AUTHENTICATION_TYPE],
+          [:token,          'the_token'],
+          [:token_code,     'the_token_code']
+        ]],
+
+        [:transaction, [
+          [:transaction_id, options[:transaction_id]]
+        ]],
+      ])
 
       @gateway.send(:build_status_request_body, options)
     end
@@ -258,11 +259,11 @@ module IdealTestCases
 
   class SuccessfulResponseTest < Test::Unit::TestCase
     def setup
-      @response = IdealResponse.new(DIRECTORY_RESPONSE)
+      @response = IdealResponse.new(DIRECTORY_RESPONSE_WITH_MULTIPLE_ISSUERS)
     end
 
     def test_initializes_with_only_response_body
-      assert_equal Hash.from_xml(DIRECTORY_RESPONSE), @response.params
+      assert_equal Hash.from_xml(DIRECTORY_RESPONSE_WITH_MULTIPLE_ISSUERS), @response.params
     end
 
     def test_successful
@@ -290,9 +291,20 @@ module IdealTestCases
       @gateway = IdealGateway.new
     end
 
+    def test_returns_a_list_with_only_one_issuer
+      @gateway.stubs(:build_directory_request_body).returns('the request body')
+      @gateway.expects(:post_data).with('the request body').returns(DIRECTORY_RESPONSE_WITH_ONE_ISSUER)
+
+      expected_issuers = [{ :id => '1006', :name => 'ABN AMRO Bank' }]
+
+      directory_response = @gateway.issuers
+      assert_instance_of IdealDirectoryResponse, directory_response
+      assert_equal expected_issuers, directory_response.list
+    end
+
     def test_returns_list_of_issuers_from_response
       @gateway.stubs(:build_directory_request_body).returns('the request body')
-      @gateway.expects(:post_data).with('the request body').returns(DIRECTORY_RESPONSE)
+      @gateway.expects(:post_data).with('the request body').returns(DIRECTORY_RESPONSE_WITH_MULTIPLE_ISSUERS)
 
       expected_issuers = [
         { :id => '1006', :name => 'ABN AMRO Bank' },
@@ -444,7 +456,23 @@ ilZjTJIlLOkXk6uE8vQGjZy0BUnjNPkXOQGkTyj4jDxZ2z+z9Vy8BwfothdcYbZK
 48ZOp3u74DdEfQejNxBeqLODzrxQTV4=
 -----END CERTIFICATE-----}
 
-  DIRECTORY_RESPONSE = %{<?xml version="1.0" encoding="UTF-8"?>
+  DIRECTORY_RESPONSE_WITH_ONE_ISSUER = %{<?xml version="1.0" encoding="UTF-8"?>
+<DirectoryRes xmlns="http://www.idealdesk.com/Message" version="1.1.0">
+  <createDateTimeStamp>2001-12-17T09:30:47.0Z</createDateTimeStamp>
+  <Acquirer>
+    <acquirerID>0245</acquirerID>
+  </Acquirer>
+  <Directory>
+    <directoryDateTimeStamp>2004-11-10T10:15:12.145Z</directoryDateTimeStamp>
+    <Issuer>
+      <issuerID>1006</issuerID>
+      <issuerName>ABN AMRO Bank</issuerName>
+      <issuerList>Short</issuerList>
+    </Issuer>
+  </Directory>
+</DirectoryRes>}
+
+  DIRECTORY_RESPONSE_WITH_MULTIPLE_ISSUERS = %{<?xml version="1.0" encoding="UTF-8"?>
 <DirectoryRes xmlns="http://www.idealdesk.com/Message" version="1.1.0">
   <createDateTimeStamp>2001-12-17T09:30:47.0Z</createDateTimeStamp>
   <Acquirer>

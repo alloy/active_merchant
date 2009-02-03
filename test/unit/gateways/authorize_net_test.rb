@@ -97,9 +97,7 @@ class AuthorizeNetTest < Test::Unit::TestCase
   end 
 
   def test_purchase_meets_minimum_requirements
-    params = { 
-      :amount => "1.01",
-    }                                                         
+    params = { :amount => "1.01" }
 
     @gateway.send(:add_creditcard, params, @credit_card)
 
