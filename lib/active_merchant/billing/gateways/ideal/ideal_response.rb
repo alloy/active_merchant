@@ -79,6 +79,12 @@ module ActiveMerchant #:nodoc:
         @success = transaction_successful?
       end
 
+      # Returns the status message, which is one of: Success, Cancelled,
+      # Expired, Open, or Failure.
+      def status
+        transaction['status']
+      end
+
       private
 
       def transaction_successful?
@@ -88,10 +94,6 @@ module ActiveMerchant #:nodoc:
 
       def transaction
         @params['acquirer_status_res']['transaction']
-      end
-
-      def status
-        transaction['status']
       end
 
       def message

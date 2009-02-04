@@ -40,14 +40,11 @@ class IdealTest < Test::Unit::TestCase
     assert @gateway.issuers.test?
   end
 
-  def test_retrieval_of_issuers
-    assert_equal [{ :id => '0151', :name => 'Issuer Simulator' }], @gateway.issuers.list
-  end
-
   def test_setup_purchase_with_valid_options
     response = @gateway.setup_purchase(550, @valid_options)
 
     assert response.success?
+    assert_not_nil response.service_url
     assert_not_nil response.transaction_id
     assert_equal @valid_options[:order_id], response.purchase_id
   end
@@ -61,85 +58,81 @@ class IdealTest < Test::Unit::TestCase
     assert_not_nil response.error_message[:human]
   end
 
-  # # default payment should succeed
-  # def test_purchase_successful
-  #   # first setup the payment
-  #   response = @gateway.setup_purchase(2599, @options)
-  #   
-  #   assert response.success?, "Setup should succeed."
-  # 
-  #   assert_equal "1234567890123456", response.transaction['purchaseID']
-  #   assert_equal "0050", response.params['AcquirerTrxRes']['Acquirer'][ 'acquirerID']    
-  #   assert_not_nil response.service_url, "Response should contain a service url for payment"
-  #       
-  #   # now authorize the payment, issuer simulator has completed the payment 
-  #   response = @gateway.capture(:transaction_id => response.transaction['transactionID'])
-  # 
-  #   assert response.success?, 'Transaction should succeed'
-  #   assert_equal "Success", response.transaction['status']
-  #   assert_equal "DEN HAAG", response.transaction['consumerCity']
-  #   assert_equal "C M Bröcker-Meijer en M Bröcker", response.transaction['consumerName'] 
-  # end
-  # 
-  # # payment of 200 should cancel
-  # def test_purchase_cancel
-  #   # first setup the payment
-  #   response = @gateway.setup_purchase(200, @options)
-  #   
-  #   assert response.success?, "Setup should succeed."    
-  #   # now try to authorize the payment, issuer simulator has cancelled the payment 
-  #   response = @gateway.capture(:transaction_id => response.transaction['transactionID'])
-  # 
-  #   assert !response.success?, 'Transaction should cancel'
-  #   assert_equal "Cancelled", response.transaction['status'], 'Transaction should cancel'
-  # end
-  # 
-  # # payment of 300 should expire  
-  # def test_transaction_expired       
-  #   # first setup the payment
-  #   response = @gateway.setup_purchase(300, @options)
-  # 
-  #   # now try to authorize the payment, issuer simulator let the payment expire
-  #   response = @gateway.capture(:transaction_id => response.transaction['transactionID'])
-  #   
-  #   assert !response.success?, 'Transaction should expire'
-  #   assert_equal "Expired", response.transaction['status'], 'Transaction should expire'    
-  # end
-  # 
-  # # payment of 400 should remain open
-  # def test_transaction_expired       
-  #   # first setup the payment
-  #   response = @gateway.setup_purchase(400, @options)
-  # 
-  #   # now try to authorize the payment, issuer simulator keeps the payment open
-  #   response = @gateway.capture(:transaction_id => response.transaction['transactionID'])
-  #   
-  #   assert !response.success?, 'Transaction should remain open'
-  #   assert_equal "Open", response.transaction['status'], 'Transaction should remain open'    
-  # end
-  # 
-  # # payment of 500 should fail at issuer
-  # def test_transaction_expired       
-  #   # first setup the payment
-  #   response = @gateway.setup_purchase(500, @options)
-  # 
-  #   # now try to authorize the payment, issuer simulator lets the payment fail
-  #   response = @gateway.capture(:transaction_id => response.transaction['transactionID'])
-  #   assert !response.success?, 'Transaction should fail'
-  #   assert_equal "Failure", response.transaction['status'], 'Transaction should fail'
-  # end
-  # 
-  # # payment of 700 should be unknown at issuer
-  # def test_transaction_expired       
-  #   # first setup the payment
-  #   response = @gateway.setup_purchase(700, @options)
-  # 
-  #   # now try to authorize the payment, issuer simulator lets the payment fail
-  #   response = @gateway.capture(:transaction_id => response.transaction['transactionID'])
-  # 
-  #   assert !response.success?, 'Transaction should fail'
-  #   assert_equal "SO1000", response.error[ 'errorCode'], 'ErrorCode should be correct'
-  # end
-  
-  
+  ###
+  #
+  # These are the 7 integration tests of ING which need to be ran sucessfuly
+  # _before_ you'll get access to the live environment.
+  #
+  # Which test is ran is defined by the `amount' used in the test.
+  #
+
+  # This test does not require a transaction.
+  def test_retrieval_of_issuers
+    assert_equal [{ :id => '0151', :name => 'Issuer Simulator' }], @gateway.issuers.list
+  end
+
+  # Transaction with amount = 100
+  def test_successful_transaction
+    assert @gateway.capture(test_transaction_id(:success)).success?
+  end
+
+  # Transaction with amount = 200
+  def test_cancelled_transaction
+    captured_response = @gateway.capture(test_transaction_id(:cancelled))
+
+    assert !captured_response.success?
+    assert_equal 'Cancelled', captured_response.status
+  end
+
+  # Transaction with amount = 300
+  def test_expired_transaction
+    captured_response = @gateway.capture(test_transaction_id(:expired))
+
+    assert !captured_response.success?
+    assert_equal 'Expired', captured_response.status
+  end
+
+  # Transaction with amount = 400
+  def test_still_open_transaction
+    captured_response = @gateway.capture(test_transaction_id(:open))
+
+    assert !captured_response.success?
+    assert_equal 'Open', captured_response.status
+  end
+
+  # Transaction with amount = 500
+  def test_failed_transaction
+    captured_response = @gateway.capture(test_transaction_id(:failure))
+
+    assert !captured_response.success?
+    assert_equal 'Failure', captured_response.status
+  end
+
+  # Transaction with amount = 700
+  def test_internal_server_error
+    captured_response = @gateway.capture(test_transaction_id(:server_error))
+
+    assert !captured_response.success?
+    assert_equal 'SO1000', captured_response.error_code
+  end
+
+  private
+
+  # Calls #setup_purchase with the amount corresponding to the named test and
+  # returns the transaction_id. Before returning an assertion will be ran to
+  # test whether or not the transaction was successful.
+  def test_transaction_id(type)
+    amount = case type
+    when :success      then 100
+    when :cancelled    then 200
+    when :expired      then 300
+    when :open         then 400
+    when :failure      then 500
+    when :server_error then 700
+    end
+
+    response = @gateway.setup_purchase(amount, @valid_options)
+    assert response.success?
+    response.transaction_id
+  end
 end 
