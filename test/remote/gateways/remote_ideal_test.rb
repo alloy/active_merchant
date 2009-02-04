@@ -19,10 +19,9 @@ class IdealTest < Test::Unit::TestCase
     self.test_url = "https://idealtest.secure-ing.com:443/ideal/iDeal"
     self.live_url = nil
   end
-  
+
   def setup
     Base.gateway_mode = :test
-
     @gateway = Base.gateway(:ideal).new
 
     @valid_options = {
@@ -43,7 +42,7 @@ class IdealTest < Test::Unit::TestCase
   def test_setup_purchase_with_valid_options
     response = @gateway.setup_purchase(550, @valid_options)
 
-    assert response.success?
+    assert_success response
     assert_not_nil response.service_url
     assert_not_nil response.transaction_id
     assert_equal @valid_options[:order_id], response.purchase_id
@@ -52,7 +51,7 @@ class IdealTest < Test::Unit::TestCase
   def test_setup_purchase_with_invalid_amount
     response = @gateway.setup_purchase(0.5, @valid_options)
 
-    assert !response.success?
+    assert_failure response
     assert_equal "BR1210", response.error_code
     assert_not_nil response.error_message[:system]
     assert_not_nil response.error_message[:human]
@@ -63,65 +62,64 @@ class IdealTest < Test::Unit::TestCase
   # These are the 7 integration tests of ING which need to be ran sucessfuly
   # _before_ you'll get access to the live environment.
   #
-  # Which test is ran is defined by the `amount' used in the test.
+  # See test_transaction_id for info on how the remote tests are ran.
   #
 
-  # This test does not require a transaction.
   def test_retrieval_of_issuers
     assert_equal [{ :id => '0151', :name => 'Issuer Simulator' }], @gateway.issuers.list
   end
 
-  # Transaction with amount = 100
   def test_successful_transaction
-    assert @gateway.capture(test_transaction_id(:success)).success?
+    assert_success capture_transaction(:success)
   end
 
-  # Transaction with amount = 200
   def test_cancelled_transaction
-    captured_response = @gateway.capture(test_transaction_id(:cancelled))
+    captured_response = capture_transaction(:cancelled)
 
-    assert !captured_response.success?
+    assert_failure captured_response
     assert_equal 'Cancelled', captured_response.status
   end
 
-  # Transaction with amount = 300
   def test_expired_transaction
-    captured_response = @gateway.capture(test_transaction_id(:expired))
+    captured_response = capture_transaction(:expired)
 
-    assert !captured_response.success?
+    assert_failure captured_response
     assert_equal 'Expired', captured_response.status
   end
 
-  # Transaction with amount = 400
   def test_still_open_transaction
-    captured_response = @gateway.capture(test_transaction_id(:open))
+    captured_response = capture_transaction(:open)
 
-    assert !captured_response.success?
+    assert_failure captured_response
     assert_equal 'Open', captured_response.status
   end
 
-  # Transaction with amount = 500
   def test_failed_transaction
-    captured_response = @gateway.capture(test_transaction_id(:failure))
+    captured_response = capture_transaction(:failure)
 
-    assert !captured_response.success?
+    assert_failure captured_response
     assert_equal 'Failure', captured_response.status
   end
 
-  # Transaction with amount = 700
   def test_internal_server_error
-    captured_response = @gateway.capture(test_transaction_id(:server_error))
+    captured_response = capture_transaction(:server_error)
 
-    assert !captured_response.success?
+    assert_failure captured_response
     assert_equal 'SO1000', captured_response.error_code
   end
 
   private
 
+  # Shortcut method which does a #setup_purchase through #test_transaction and
+  # captures the resulting transaction and returns the capture response.
+  def capture_transaction(type)
+    @gateway.capture test_transaction(type).transaction_id
+  end
+
   # Calls #setup_purchase with the amount corresponding to the named test and
-  # returns the transaction_id. Before returning an assertion will be ran to
-  # test whether or not the transaction was successful.
-  def test_transaction_id(type)
+  # returns the response. Before returning an assertion will be ran to test
+  # whether or not the transaction was successful.
+  def test_transaction(type)
     amount = case type
     when :success      then 100
     when :cancelled    then 200
@@ -133,6 +131,6 @@ class IdealTest < Test::Unit::TestCase
 
     response = @gateway.setup_purchase(amount, @valid_options)
     assert response.success?
-    response.transaction_id
+    response
   end
 end 

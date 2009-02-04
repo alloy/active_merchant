@@ -8,7 +8,7 @@
 # If the login is numeric, ensure that you place quotes around it.
 # Leading zeros will be lost when YAML parses the file if you don't.
 #
-# Paste any required PEM certificates after the pem key.  
+# Paste any required PEM certificates after the pem key.
 #
 authorize_net:
   login: X
