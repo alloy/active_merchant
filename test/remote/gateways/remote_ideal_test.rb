@@ -26,7 +26,7 @@ class IdealTest < Test::Unit::TestCase
     @gateway = Base.gateway(:ideal).new
 
     @valid_options = {
-      :issuer_id         => '0001',
+      :issuer_id         => '0151',
       :expiration_period => 'PT10M',
       :return_url        => 'http://return_to.example.com',
       :order_id          => '123456789012',
@@ -44,14 +44,11 @@ class IdealTest < Test::Unit::TestCase
     assert_equal [{ :id => '0151', :name => 'Issuer Simulator' }], @gateway.issuers.list
   end
 
-  def test_setup_purchase
-    response = @gateway.setup_purchase(550, @valid_options)
-    assert response.success?
-    assert response.test?
-    assert_nil response.error, "Response should not have an error"
+  def test_setup_purchase_with_valid_options
+    assert @gateway.setup_purchase(550, @valid_options).success?
   end
 
-  # def test_return_errors    
+  # def test_return_errors
   #   response = @gateway.setup_purchase(0.5, @options)
   #   assert !response.success?, "Should fail"
   #   assert_equal "BR1210", response.error[ 'errorCode']
