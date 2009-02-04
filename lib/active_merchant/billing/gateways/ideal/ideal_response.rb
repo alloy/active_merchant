@@ -23,6 +23,13 @@ module ActiveMerchant #:nodoc:
         end
       end
 
+      # Returns the code of the error that occured.
+      #
+      # TODO: Include list of error code descriptions.
+      def error_code
+        @params['error_res']['error']['error_code'] unless success?
+      end
+
       private
 
       def error_occured?
@@ -50,6 +57,8 @@ module ActiveMerchant #:nodoc:
       end
 
       # Returns the purchase ID for this transaction.
+      #
+      # FIXME: Rename to order_id for consitency.
       def purchase_id
         transaction['purchase_id']
       end

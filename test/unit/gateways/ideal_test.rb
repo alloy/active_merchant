@@ -326,6 +326,14 @@ module IdealTestCases
     def test_successful
       assert @response.success?
     end
+
+    def test_returns_no_error_messages
+      assert_nil @response.error_message
+    end
+
+    def test_returns_no_error_code
+      assert_nil @response.error_code
+    end
   end
 
   class ErrorResponseTest < Test::Unit::TestCase
@@ -340,6 +348,10 @@ module IdealTestCases
     def test_returns_error_messages
       assert_equal 'Failure in system', @response.error_message[:system]
       assert_equal 'Betalen met iDEAL is nu niet mogelijk.', @response.error_message[:human]
+    end
+
+    def test_returns_error_code
+      assert_equal 'SO1000', @response.error_code
     end
   end
 

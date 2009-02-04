@@ -45,18 +45,22 @@ class IdealTest < Test::Unit::TestCase
   end
 
   def test_setup_purchase_with_valid_options
-    assert @gateway.setup_purchase(550, @valid_options).success?
+    response = @gateway.setup_purchase(550, @valid_options)
+
+    assert response.success?
+    assert_not_nil response.transaction_id
+    assert_equal @valid_options[:order_id], response.purchase_id
   end
 
-  # def test_return_errors
-  #   response = @gateway.setup_purchase(0.5, @options)
-  #   assert !response.success?, "Should fail"
-  #   assert_equal "BR1210", response.error[ 'errorCode']
-  #   assert_not_nil response.error[ 'errorMessage'],  "Response should contain an Error message"
-  #   assert_not_nil response.error[ 'errorDetail'],   "Response should contain an Error Detail message" 
-  #   assert_not_nil response.error['consumerMessage'],"Response should contain an Consumer Error message"    
-  # end
-  # 
+  def test_setup_purchase_with_invalid_amount
+    response = @gateway.setup_purchase(0.5, @valid_options)
+
+    assert !response.success?
+    assert_equal "BR1210", response.error_code
+    assert_not_nil response.error_message[:system]
+    assert_not_nil response.error_message[:human]
+  end
+
   # # default payment should succeed
   # def test_purchase_successful
   #   # first setup the payment
