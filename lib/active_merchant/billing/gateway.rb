@@ -6,7 +6,7 @@ module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     # 
     # == Description
-    # The Gateway class is the base class for all ActiveMerchant gateway implementations. 
+    # The Gateway class is the base class for all ActiveMerchant gateway implementations.
     # 
     # The standard list of gateway functions that most concrete gateway subclasses implement is:
     # 
@@ -51,7 +51,7 @@ module ActiveMerchant #:nodoc:
     # * <tt>:zip</tt> - The zip or postal code of the customer.
     # * <tt>:phone</tt> - The phone number of the customer.
     #
-    # == Implmenting new gateways
+    # == Implementing new gateways
     #
     # See the {ActiveMerchant Guide to Contributing}[http://code.google.com/p/activemerchant/wiki/Contributing]
     #
@@ -60,73 +60,73 @@ module ActiveMerchant #:nodoc:
       include RequiresParameters
       include CreditCardFormatting
       include Utils
-      
+
       DEBIT_CARDS = [ :switch, :solo ]
-      
+
       cattr_reader :implementations
       @@implementations = []
-      
+
       def self.inherited(subclass)
         super
         @@implementations << subclass
       end
-    
+
       # The format of the amounts used by the gateway
       # :dollars => '12.50'
       # :cents => '1250'
       class_inheritable_accessor :money_format
       self.money_format = :dollars
-      
+
       # The default currency for the transactions if no currency is provided
       class_inheritable_accessor :default_currency
-      
+
       # The countries of merchants the gateway supports
       class_inheritable_accessor :supported_countries
       self.supported_countries = []
-      
+
       # The supported card types for the gateway
       class_inheritable_accessor :supported_cardtypes
       self.supported_cardtypes = []
-      
+
       class_inheritable_accessor :homepage_url
       class_inheritable_accessor :display_name
-      
+
       # The application making the calls to the gateway
       # Useful for things like the PayPal build notation (BN) id fields
       superclass_delegating_accessor :application_id
       self.application_id = 'ActiveMerchant'
-      
+
       attr_reader :options
-      
+
       # Use this method to check if your gateway of interest supports a credit card of some type
       def self.supports?(card_type)
         supported_cardtypes.include?(card_type.to_sym)
       end
-      
+
       def self.card_brand(source)
         result = source.respond_to?(:brand) ? source.brand : source.type
         result.to_s.downcase
       end
-    
+
       def card_brand(source)
         self.class.card_brand(source)
       end
-    
+
       # Initialize a new gateway.
       # 
       # See the documentation for the gateway you will be using to make sure there are no other 
       # required options.
       def initialize(options = {})
       end
-                                     
+
       # Are we running in test mode?
       def test?
         Base.gateway_mode == :test
       end
-            
+
       private # :nodoc: all
 
-      def name 
+      def name
         self.class.name.scan(/\:\:(\w+)Gateway/).flatten.first
       end
       
@@ -135,7 +135,7 @@ module ActiveMerchant #:nodoc:
       # TODO Refactor this method. It's a tad on the ugly side.
       def amount(money)
         return nil if money.nil?
-        cents = money.respond_to?(:cents) ? money.cents : money 
+        cents = money.respond_to?(:cents) ? money.cents : money
 
         if money.is_a?(String) or cents.to_i < 0
           raise ArgumentError, 'money amount must be either a Money object or a positive integer in cents.' 
@@ -147,12 +147,12 @@ module ActiveMerchant #:nodoc:
           sprintf("%.2f", cents.to_f / 100)
         end
       end
-      
+
       # Ascertains the currency to be used on the money supplied.
       def currency(money)
         money.respond_to?(:currency) ? money.currency : self.default_currency
       end
-      
+
       def requires_start_date_or_issue_number?(credit_card)
         return false if card_brand(credit_card).blank?
         DEBIT_CARDS.include?(card_brand(credit_card).to_sym)

@@ -28,7 +28,7 @@ class IdealTest < Test::Unit::TestCase
     assert_success response
     assert_not_nil response.service_url
     assert_not_nil response.transaction_id
-    assert_equal @valid_options[:order_id], response.purchase_id
+    assert_equal @valid_options[:order_id], response.order_id
   end
 
   def test_setup_purchase_with_invalid_amount

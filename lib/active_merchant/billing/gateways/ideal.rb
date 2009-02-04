@@ -90,9 +90,63 @@ require 'digest/sha1'
 
 module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
+    # == iDEAL
+    #
+    # iDEAL is a set of standards developed to facilitate online payments
+    # through the online banking applications that most Dutch banks provide.
+    #
+    # If a consumer already has online banking with ABN AMRO, Fortis,
+    # ING/Postbank, Rabobank, or SNS Bank, they can make payments using iDEAL in
+    # a way they are already familiar with.
+    #
+    # See http://ideal.nl and http://idealdesk.com for more information.
+    #
+    # ==== Merchant account
+    #
+    # In order to use iDEAL you will need to get an iDEAL merchant account from
+    # your bank. Every bank offers their own ‘complete payment’ services, which
+    # can obfuscate the choices. The payment product that you will _want_ to
+    # get in order to use this gateway class is a bare bones iDEAL account.
+    #
+    # * ING/Postbank: iDEAL Advanced
+    # * ABN AMRO: iDEAL Zelfbouw (Do it yourself)
+    #
+    # TODO: Add the names of the correct payment products from the other banks.
+    #
+    # ==== Private keys, certificates and all that jazz
+    #
+    # Messages to, and from, the acquirer, are all signed in order to prove
+    # their authenticity. This means you will have to have a certificate to
+    # sign your messages going _to_ the acquirer. And you will need to acquire
+    # the certificate of the acquirer which it uses to sign their messages.
+    #
+    # The latter can be downloaded from your acquirer after registration.
+    # The former, however, can be a certificate signed by a CA authority or a
+    # self-signed certificate.
+    #
+    # See, for instance, http://www.verisign.com for more info on a certificate
+    # signed by a CA authority.
+    #
+    # To create a self-signed certificate follow these few steps:
+    #
+    #   $ /usr/bin/openssl genrsa -des3 -out private_key.pem -passout pass:the_passphrase 1024
+    #   $ /usr/bin/openssl req -x509 -new -key private_key.pem -passin pass:the_passphrase -days 3650 -out private_certificate.cer
+    #
+    # Substitute <tt>the_passphrase</tt> with your own passphrase.
+    #
+    # For more information see:
+    # * http://en.wikipedia.org/wiki/Certificate_authority
+    # * http://en.wikipedia.org/wiki/Self-signed_certificate
+    #
+    # === Example
+    #
+    # First we'll need to configure the gateway:
+    #
+    #   
     class IdealGateway < Gateway
       AUTHENTICATION_TYPE = 'SHA1_RSA'
       LANGUAGE = 'nl'
+      CURRENCY = 'EUR'
       API_VERSION = '1.1.0'
       XML_NAMESPACE = 'http://www.idealdesk.com/Message'
 
@@ -158,7 +212,7 @@ module ActiveMerchant #:nodoc:
       #   ActiveMerchant::Billing::IdealGateway.live_url = "https://ideal.secure-ing.com:443/ideal/iDeal"
       cattr_accessor :test_url, :live_url
 
-      # Returns the merchant subID being used for this IdealGateway instance.
+      # Returns the merchant `subID' being used for this IdealGateway instance.
       # Defaults to 0.
       attr_reader :sub_id
 
@@ -171,31 +225,69 @@ module ActiveMerchant #:nodoc:
         super
       end
 
-      # Returns the url of the acquirer matching the current environment. When
-      # #test? returns +true+ the IdealGateway.test_url is used, otherwise the
-      # IdealGateway.live_url is used.
+      # Returns the url of the acquirer matching the current environment.
+      #
+      # When #test? returns +true+ the IdealGateway.test_url is used, otherwise
+      # the IdealGateway.live_url is used.
       def acquirer_url
         test? ? self.class.test_url : self.class.live_url
       end
 
-      # Sends a Directory Request to the acquirer and returns an
-      # IdealDirectoryResponse with the #list of issuers.
+      # Sends a directory request to the acquirer and returns an
+      # IdealDirectoryResponse. Use IdealDirectoryResponse#list to receive the
+      # actuall array of available issuers.
+      #
+      #   gateway.issuers.list # => [{ :id => '1006', :name => 'ABN AMRO Bank' }]
       def issuers
         post_data build_directory_request_body, IdealDirectoryResponse
       end
 
-      # Starts a purchase by sending an acquirer transaction request
-      # (AcquirerTrxReq) and returns an IdealTransactionResponse with the
-      # #purchase_id and #transaction_id which is needed for the capture step.
+      # Starts a purchase by sending an acquirer transaction request for the
+      # specified +money+ amount in EURO cents.
       #
-      # TODO: has max amount of chars for some fields
+      # On success returns an IdealTransactionResponse with the #transaction_id
+      # which is needed for the capture step. (See capture for an example.)
+      #
+      # ==== Options
+      #
+      # Note that all options that have a character limit are _also_ checked
+      # for diacritical characters. If it does contain diacritical characters,
+      # or exceeds the character limit, an ArgumentError is raised.
+      #
+      # ===== Required
+      #
+      # * <tt>:issuer_id</tt> - The <tt>:id</tt> of an issuer available at the acquirer to which the transaction should be made.
+      # * <tt>:order_id</tt> - The order number. Limited to 12 characters.
+      # * <tt>:description</tt> - A description of the transaction. Limited to 32 characters.
+      # * <tt>:return_url</tt> - A URL on the merchant’s system to which the consumer is redirected _after_ payment. The acquirer will add the following GET variables:
+      #   * <tt>trxid</tt> - The <tt>:order_id</tt>.
+      #   * <tt>ec</tt> - The <tt>:entrance_code</tt> _if_ it was specified.
+      #
+      # ===== Optional
+      #
+      # * <tt>:entrance_code</tt> - This code is an abitrary token which can be used to identify the transaction besides the <tt>:order_id</tt>. Limited to 40 characters.
+      # * <tt>:expiration_period</tt> - The period of validity of the payment request measured from the receipt by the issuer. The consumer must approve the payment within this period, otherwise the IdealStatusResponse#status will be set to `Expired'. E.g., consider an <tt>:expiration_period</tt> of `P3DT6H10M':
+      #   * P: relative time designation.
+      #   * 3 days.
+      #   * T: separator.
+      #   * 6 hours.
+      #   * 10 minutes.
       def setup_purchase(money, options)
         post_data build_transaction_request_body(money, options), IdealTransactionResponse
       end
 
       # Sends a acquirer status request for the specified +transaction_id+ and
-      # returns an IdealStatusResponse which returns whether or not the
-      # transaction was a #success?.
+      # returns an IdealStatusResponse.
+      #
+      #   transaction_response = gateway.setup_purchase(4321, valid_options)
+      #
+      #   if transaction_response.success?
+      #     capture_response = gateway.capture(transaction_response.transaction_id)
+      #
+      #     if capture_response.success?
+      #       puts "Congratulations, you are now the proud owner of a Dutch windmill!"
+      #     end
+      #   end
       def capture(transaction_id)
         post_data build_status_request_body(:transaction_id => transaction_id), IdealStatusResponse
       end
@@ -329,7 +421,7 @@ module ActiveMerchant #:nodoc:
       end
 
       def build_transaction_request_body(money, options)
-        requires!(options, :issuer_id, :expiration_period, :return_url, :order_id, :currency, :description, :entrance_code)
+        requires!(options, :issuer_id, :expiration_period, :return_url, :order_id, :description, :entrance_code)
 
         ensure_validity(:money, money.to_s, 12)
         ensure_validity(:order_id, options[:order_id], 12)
@@ -344,11 +436,11 @@ module ActiveMerchant #:nodoc:
                   options[:return_url] +
                   options[:order_id] +
                   money.to_s +
-                  options[:currency] +
+                  CURRENCY +
                   LANGUAGE +
                   options[:description] +
                   options[:entrance_code]
-        
+
         xml_for(:acquirer_transaction_request, [
           [:created_at, timestamp],
           [:issuer, [[:issuer_id, options[:issuer_id]]]],
@@ -365,7 +457,7 @@ module ActiveMerchant #:nodoc:
           [:transaction, [
             [:purchase_id,       options[:order_id]],
             [:amount,            money],
-            [:currency,          options[:currency]],
+            [:currency,          CURRENCY],
             [:expiration_period, options[:expiration_period]],
             [:language,          LANGUAGE],
             [:description,       options[:description]],

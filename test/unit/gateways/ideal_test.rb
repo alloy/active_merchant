@@ -21,7 +21,6 @@ module IdealTestCases
     :expiration_period => 'PT10M',
     :return_url        => 'http://return_to.example.com',
     :order_id          => '12345678901',
-    :currency          => 'EUR',
     :description       => 'A classic Dutch windmill',
     :entrance_code     => '1234'
   }
@@ -237,7 +236,7 @@ module IdealTestCases
                 VALID_PURCHASE_OPTIONS[:return_url] +
                 VALID_PURCHASE_OPTIONS[:order_id] +
                 money.to_s +
-                VALID_PURCHASE_OPTIONS[:currency] +
+                IdealGateway::CURRENCY +
                 IdealGateway::LANGUAGE +
                 VALID_PURCHASE_OPTIONS[:description] +
                 VALID_PURCHASE_OPTIONS[:entrance_code]
@@ -260,7 +259,7 @@ module IdealTestCases
         [:transaction, [
           [:purchase_id,       VALID_PURCHASE_OPTIONS[:order_id]],
           [:amount,            money],
-          [:currency,          VALID_PURCHASE_OPTIONS[:currency]],
+          [:currency,          IdealGateway::CURRENCY],
           [:expiration_period, VALID_PURCHASE_OPTIONS[:expiration_period]],
           [:language,          IdealGateway::LANGUAGE],
           [:description,       VALID_PURCHASE_OPTIONS[:description]],
@@ -422,9 +421,9 @@ module IdealTestCases
       assert_equal 'https://ideal.example.com/long_service_url', @setup_purchase_response.service_url
     end
 
-    def test_setup_purchase_returns_response_with_transaction_and_purchase_ids
+    def test_setup_purchase_returns_response_with_transaction_and_order_ids
       assert_equal '0001023456789112', @setup_purchase_response.transaction_id
-      assert_equal 'iDEAL-aankoop 21', @setup_purchase_response.purchase_id
+      assert_equal 'iDEAL-aankoop 21', @setup_purchase_response.order_id
     end
   end
 

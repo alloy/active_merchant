@@ -56,10 +56,8 @@ module ActiveMerchant #:nodoc:
         transaction['transaction_id']
       end
 
-      # Returns the purchase ID for this transaction.
-      #
-      # FIXME: Rename to order_id for consitency.
-      def purchase_id
+      # Returns the <tt>:order_id</tt> for this transaction.
+      def order_id
         transaction['purchase_id']
       end
 
