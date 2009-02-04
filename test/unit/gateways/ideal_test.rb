@@ -1,6 +1,21 @@
 require File.dirname(__FILE__) + '/../../test_helper'
 
 module IdealTestCases
+  # This method is called at the end of the file when all fixture data has been loaded.
+  def self.setup_ideal_gateway!
+    ActiveMerchant::Billing::IdealGateway.class_eval do
+      self.merchant_id = '123456789'
+
+      self.passphrase = 'passphrase'
+      self.private_key = PRIVATE_KEY
+      self.private_certificate = PRIVATE_CERTIFICATE
+      self.ideal_certificate = IDEAL_CERTIFICATE
+
+      self.test_url = "https://idealtest.example.com:443/ideal/iDeal"
+      self.live_url = "https://ideal.example.com:443/ideal/iDeal"
+    end
+  end
+
   VALID_PURCHASE_OPTIONS = {
     :issuer_id         => '0001',
     :expiration_period => 'PT10M',
@@ -662,20 +677,5 @@ ilZjTJIlLOkXk6uE8vQGjZy0BUnjNPkXOQGkTyj4jDxZ2z+z9Vy8BwfothdcYbZK
   </Error>
 </ErrorRes>}
 
-  ###
-  #
-  # Setup the test configuration
-  #
-
-  class ActiveMerchant::Billing::IdealGateway
-    self.merchant_id = '123456789'
-
-    self.passphrase = 'passphrase'
-    self.private_key = PRIVATE_KEY
-    self.private_certificate = PRIVATE_CERTIFICATE
-    self.ideal_certificate = IDEAL_CERTIFICATE
-
-    self.test_url = "https://idealtest.example.com:443/ideal/iDeal"
-    self.live_url = "https://ideal.example.com:443/ideal/iDeal"
-  end
+  setup_ideal_gateway!
 end
