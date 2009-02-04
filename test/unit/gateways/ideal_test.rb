@@ -5,9 +5,9 @@ module IdealTestCases
     :issuer_id         => '0001',
     :expiration_period => 'PT10M',
     :return_url        => 'http://return_to.example.com',
-    :order_id          => '1234567890123456',
+    :order_id          => '12345678901',
     :currency          => 'EUR',
-    :description       => 'A classic Dutch windmill for in the garden',
+    :description       => 'A classic Dutch windmill',
     :entrance_code     => '1234'
   }
 
@@ -110,9 +110,15 @@ module IdealTestCases
       assert_equal encoded_signature, @gateway.send(:token_code, message)
     end
 
-    def test_post_data_posts_with_ssl_to_acquirer_url
-      @gateway.expects(:ssl_post).with(@gateway.acquirer_url, 'data')
-      @gateway.send(:post_data, 'data')
+    def test_posts_data_with_ssl_to_acquirer_url_and_return_the_correct_response
+      IdealResponse.expects(:new).with('response', :test => true)
+      @gateway.expects(:ssl_post).with(@gateway.acquirer_url, 'data').returns('response')
+      @gateway.send(:post_data, 'data', IdealResponse)
+
+      @gateway.stubs(:test?).returns(false)
+      IdealResponse.expects(:new).with('response', :test => false)
+      @gateway.expects(:ssl_post).with(@gateway.acquirer_url, 'data').returns('response')
+      @gateway.send(:post_data, 'data', IdealResponse)
     end
   end
 
@@ -160,6 +166,48 @@ module IdealTestCases
 
         assert_raise(ArgumentError) do
           @gateway.send(:build_transaction_request_body, 100, options)
+        end
+      end
+    end
+
+    def test_valid_with_valid_options
+      assert_not_nil @gateway.send(:build_transaction_request_body, 4321, VALID_PURCHASE_OPTIONS)
+    end
+
+    def test_checks_that_fields_are_not_too_long
+      assert_raise ArgumentError do
+        @gateway.send(:build_transaction_request_body, 1234567890123, VALID_PURCHASE_OPTIONS) # 13 chars
+      end
+
+      [
+        [:order_id, '12345678901234567'], # 17 chars,
+        [:description, '123456789012345678901234567890123'], # 33 chars
+        [:entrance_code, '12345678901234567890123456789012345678901'] # 41
+      ].each do |key, value|
+        options = VALID_PURCHASE_OPTIONS.dup
+        options[key] = value
+
+        assert_raise ArgumentError do
+          @gateway.send(:build_transaction_request_body, 4321, options)
+        end
+      end
+    end
+
+    # FIXME: This is a very weak test, what if there are aother characters than `è'.
+    # However, I don't want to invest too much time in this atm, because A it's just
+    # wrong that we can't just use UTF as we should be able to and B we might replace
+    # the ArgumentError with just normalizing the string.
+    def test_checks_that_fields_do_not_contain_diacritical_characters
+      assert_raise ArgumentError do
+        @gateway.send(:build_transaction_request_body, 'graphème', VALID_PURCHASE_OPTIONS)
+      end
+
+      [:order_id, :description, :entrance_code].each do |key, value|
+        options = VALID_PURCHASE_OPTIONS.dup
+        options[key] = 'graphème'
+
+        assert_raise ArgumentError do
+          @gateway.send(:build_transaction_request_body, 4321, options)
         end
       end
     end
@@ -257,6 +305,15 @@ module IdealTestCases
     end
   end
 
+  class GeneralResponseTest < Test::Unit::TestCase
+    def test_resturns_if_it_is_a_test_request
+      assert IdealResponse.new(DIRECTORY_RESPONSE_WITH_MULTIPLE_ISSUERS, :test => true).test?
+
+      assert !IdealResponse.new(DIRECTORY_RESPONSE_WITH_MULTIPLE_ISSUERS, :test => false).test?
+      assert !IdealResponse.new(DIRECTORY_RESPONSE_WITH_MULTIPLE_ISSUERS).test?
+    end
+  end
+
   class SuccessfulResponseTest < Test::Unit::TestCase
     def setup
       @response = IdealResponse.new(DIRECTORY_RESPONSE_WITH_MULTIPLE_ISSUERS)
@@ -293,7 +350,7 @@ module IdealTestCases
 
     def test_returns_a_list_with_only_one_issuer
       @gateway.stubs(:build_directory_request_body).returns('the request body')
-      @gateway.expects(:post_data).with('the request body').returns(DIRECTORY_RESPONSE_WITH_ONE_ISSUER)
+      @gateway.expects(:ssl_post).with(@gateway.acquirer_url, 'the request body').returns(DIRECTORY_RESPONSE_WITH_ONE_ISSUER)
 
       expected_issuers = [{ :id => '1006', :name => 'ABN AMRO Bank' }]
 
@@ -304,7 +361,7 @@ module IdealTestCases
 
     def test_returns_list_of_issuers_from_response
       @gateway.stubs(:build_directory_request_body).returns('the request body')
-      @gateway.expects(:post_data).with('the request body').returns(DIRECTORY_RESPONSE_WITH_MULTIPLE_ISSUERS)
+      @gateway.expects(:ssl_post).with(@gateway.acquirer_url, 'the request body').returns(DIRECTORY_RESPONSE_WITH_MULTIPLE_ISSUERS)
 
       expected_issuers = [
         { :id => '1006', :name => 'ABN AMRO Bank' },
@@ -325,7 +382,7 @@ module IdealTestCases
       @gateway = IdealGateway.new
 
       @gateway.stubs(:build_transaction_request_body).with(4321, VALID_PURCHASE_OPTIONS).returns('the request body')
-      @gateway.expects(:post_data).with('the request body').returns(ACQUIRER_TRANSACTION_RESPONSE)
+      @gateway.expects(:ssl_post).with(@gateway.acquirer_url, 'the request body').returns(ACQUIRER_TRANSACTION_RESPONSE)
 
       @setup_purchase_response = @gateway.setup_purchase(4321, VALID_PURCHASE_OPTIONS)
     end
@@ -387,7 +444,7 @@ module IdealTestCases
     private
     
     def expects_request_and_returns(str)
-      @gateway.expects(:post_data).with('the request body').returns(str)
+      @gateway.expects(:ssl_post).with(@gateway.acquirer_url, 'the request body').returns(str)
     end
   end
 

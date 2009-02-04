@@ -5,9 +5,10 @@ module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     # The base class for all iDEAL response classes.
     class IdealResponse < Response
-      def initialize(response_body)
+      def initialize(response_body, options = {})
         @params = Hash.from_xml(response_body)
         @success = !error_occured?
+        @test = options[:test]
       end
 
       # Returns a hash containging the :system error message which is the
@@ -64,7 +65,7 @@ module ActiveMerchant #:nodoc:
     # which returns whether or not the transaction that was started with
     # IdealGateway#setup_purchase was successful.
     class IdealStatusResponse < IdealResponse
-      def initialize(response_body)
+      def initialize(response_body, options = {})
         super
         @success = transaction_successful?
       end

@@ -20,42 +20,37 @@ class IdealTest < Test::Unit::TestCase
     self.live_url = nil
   end
   
-  # DEFAULT_IDEAL_OPTIONS = {
-  #   :merchant => "123456789",
-  #   :private_key => File.dirname(__FILE__) + "/../../../../../config/ideal/merchantprivatekey.pem",
-  #   :private_cert => File.dirname(__FILE__) + "/../../../../../config/ideal/merchantprivatecert.cer",
-  #   :ideal_cert => File.dirname(__FILE__) + "/../../../../../config/ideal/ideal.cer",
-  #   :password => "passsword",
-  #   :expiration_period => "PT10M"
-  # }
-  
   def setup
     Base.gateway_mode = :test
 
     @gateway = Base.gateway(:ideal).new
 
-    # @options = {
-    #   :issuer_id=>'0151', 
-    #   :expiration_period=>'PT10M', 
-    #   :return_url =>'http://www.return.url', 
-    #   :order_id=>'1234567890123456', 
-    #   :currency=>'EUR', 
-    #   :description => 'A description', 
-    #   :entrance_code => '1234'
-    # }
+    @valid_options = {
+      :issuer_id         => '0001',
+      :expiration_period => 'PT10M',
+      :return_url        => 'http://return_to.example.com',
+      :order_id          => '123456789012',
+      :currency          => 'EUR',
+      :description       => 'A classic Dutch windmill',
+      :entrance_code     => '1234'
+    }
   end
 
-  def test_issuers
+  def test_making_test_requests
+    assert @gateway.issuers.test?
+  end
+
+  def test_retrieval_of_issuers
     assert_equal [{ :id => '0151', :name => 'Issuer Simulator' }], @gateway.issuers.list
   end
 
-  # def test_set_purchase
-  #   response = @gateway.setup_purchase(550, @options)
-  #   assert response.success?
-  #   assert response.test?
-  #   assert_nil response.error, "Response should not have an error"
-  # end  
-  # 
+  def test_setup_purchase
+    response = @gateway.setup_purchase(550, @valid_options)
+    assert response.success?
+    assert response.test?
+    assert_nil response.error, "Response should not have an error"
+  end
+
   # def test_return_errors    
   #   response = @gateway.setup_purchase(0.5, @options)
   #   assert !response.success?, "Should fail"

@@ -174,32 +174,44 @@ module ActiveMerchant #:nodoc:
       # Sends a Directory Request to the acquirer and returns an
       # IdealDirectoryResponse with the #list of issuers.
       def issuers
-        IdealDirectoryResponse.new post_data(build_directory_request_body)
+        post_data build_directory_request_body, IdealDirectoryResponse
       end
 
       # Starts a purchase by sending an acquirer transaction request
       # (AcquirerTrxReq) and returns an IdealTransactionResponse with the
       # #purchase_id and #transaction_id which is needed for the capture step.
+      #
+      # TODO: has max amount of chars for some fields
       def setup_purchase(money, options)
-        IdealTransactionResponse.new post_data(build_transaction_request_body(money, options))
+        post_data build_transaction_request_body(money, options), IdealTransactionResponse
       end
 
       # Sends a acquirer status request for the specified +transaction_id+ and
       # returns an IdealStatusResponse which returns whether or not the
       # transaction was a #success?.
       def capture(transaction_id)
-        IdealStatusResponse.new post_data(build_status_request_body(:transaction_id => transaction_id))
+        post_data build_status_request_body(:transaction_id => transaction_id), IdealStatusResponse
       end
 
       private
 
-      def post_data(data)
-        # puts "POSTING:"
-        # puts data
-        res = ssl_post(acquirer_url, data)
-        # puts "\nRESPONSE:"
-        # puts res
-        res
+      def post_data(data, response_klass)
+        response_klass.new(ssl_post(acquirer_url, data), :test => test?)
+      end
+
+      # This is the list of charaters that are not supported by iDEAL according
+      # to the PHP source provided by ING plus the same in capitals.
+      #
+      # TODO: Maybe we should just normalize?
+      DIACRITICAL_CHARACTERS = /[ÀÁÂÃÄÅÇŒÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝàáâãäåçæèéêëìíîïñòóôõöøùúûüý]/
+
+      # Raises an ArgumentError if the +string+ exceeds the +max_length+ amount
+      # of characters or contains any diacritical characters.
+      #
+      # TODO: Or should we just normalize and optionally warn the user?
+      def ensure_validity(key, string, max_length)
+        raise ArgumentError, "The value for `#{key}' exceeds the limit of #{max_length} characters." if string.length > max_length
+        raise ArgumentError, "The value for `#{key}' contains diacritical characters `#{string}'." if string =~ DIACRITICAL_CHARACTERS
       end
 
       # Returns the +token+ as specified in section 2.8.4 of the iDeal specs.
@@ -311,6 +323,11 @@ module ActiveMerchant #:nodoc:
 
       def build_transaction_request_body(money, options)
         requires!(options, :issuer_id, :expiration_period, :return_url, :order_id, :currency, :description, :entrance_code)
+
+        ensure_validity(:money, money.to_s, 12)
+        ensure_validity(:order_id, options[:order_id], 12)
+        ensure_validity(:description, options[:description], 32)
+        ensure_validity(:entrance_code, options[:entrance_code], 40)
 
         timestamp = created_at_timestamp
         message = timestamp +
