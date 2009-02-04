@@ -30,6 +30,13 @@ require 'digest/sha1'
 #   - Perform a status request automatically after the end of the expirationPeriod. In this case, 
 #   see also the last page of section 3.3.1 of the Reference Guide.
 
+# Creation of the necessary certificate (OSX):
+#
+#   $ /usr/bin/openssl genrsa -des3 -out private_key.pem -passout pass:the_passphrase 1024
+#   $ /usr/bin/openssl req -x509 -new -key private_key.pem -passin pass:the_passphrase -days 3650 -out private_certificate.cer
+
+
+
 #     # First, make sure you have everything setup correctly and all of your dependencies in place with:
 #     # 
 #     #   require 'rubygems'

@@ -1,28 +1,11 @@
 require File.dirname(__FILE__) + '/../../test_helper'
 
-# Creation of the necessary certificate (OSX):
-#
-#   $ /usr/bin/openssl genrsa -des3 -out private_key.pem -passout pass:the_passphrase 1024
-#   $ /usr/bin/openssl req -x509 -new -key private_key.pem -passin pass:the_passphrase -days 3650 -out private_certificate.cer
-
-KEY_ROOT = File.expand_path('../../../../REMOTE_TEST_KEYS', __FILE__)
-
 class IdealTest < Test::Unit::TestCase
-  class ActiveMerchant::Billing::IdealGateway
-    self.merchant_id = '005043502'
-
-    self.passphrase = 'the_passphrase'
-    self.private_key_file = File.join(KEY_ROOT, 'private_key.pem')
-    self.private_certificate_file = File.join(KEY_ROOT, 'private_certificate.cer')
-    self.ideal_certificate_file = File.join(KEY_ROOT, 'iDEAL.cer')
-
-    self.test_url = "https://idealtest.secure-ing.com:443/ideal/iDeal"
-    self.live_url = nil
-  end
-
   def setup
-    Base.gateway_mode = :test
-    @gateway = Base.gateway(:ideal).new
+    Base.mode = :test
+    setup_ideal_gateway(fixtures(:ideal_ing_postbank))
+
+    @gateway = IdealGateway.new
 
     @valid_options = {
       :issuer_id         => '0151',
@@ -132,5 +115,15 @@ class IdealTest < Test::Unit::TestCase
     response = @gateway.setup_purchase(amount, @valid_options)
     assert response.success?
     response
+  end
+
+  # Setup the gateway by providing a hash of aatributes and values.
+  def setup_ideal_gateway(fixture)
+    fixture = fixture.dup
+    if passphrase = fixture.delete(:passphrase)
+      IdealGateway.passphrase = passphrase
+    end
+    fixture.each { |key, value| IdealGateway.send("#{key}=", value) }
+    IdealGateway.live_url = nil
   end
 end 

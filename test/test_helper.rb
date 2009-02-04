@@ -45,7 +45,7 @@ module ActiveMerchant
       end
     end
 
-    # Allows the testing of you to check for negative assertions: 
+    # Allows the testing of you to check for negative assertions:
     # 
     #   # Instead of
     #   assert !something_that_is_false
