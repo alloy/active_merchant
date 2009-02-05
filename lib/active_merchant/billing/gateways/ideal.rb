@@ -5,89 +5,6 @@ require 'net/https'
 require 'base64'
 require 'digest/sha1'
 
-# Which should you use from your bank:
-# ABN AMRO: iDEAL Zelfbouw (Do-it-yourself)
-# ING: iDEAL Advanced
-
-# NOTES:
-
-# The iDEAL Reference Guide states that the redirect to the issuer has to take place within the 
-# browser window in which the consumer has clicked on the Pay button. The acceptor’s entire page 
-# has to be replaced by the selected issuer's entire page. It is therefore not allowed to use a second
-# browser window (pop-ups) or frames.
-
-# If the status of a transaction is unknown, or is equal to Open, you have the following options for 
-# getting the status:
-#
-#   - Perform a status request ‘manually’ for a certain transactionID. This requires 
-#   implementing a function in the online shop which allows the acceptor to launch a status 
-#   request for an individual transaction for a given transactionId.
-#
-#   - Perform automated periodic status requests for all transactions that have not yet been 
-#   completed. Here, the same guidelines apply as for requesting a single transaction status 
-#   ‘manually’.
-#
-#   - Perform a status request automatically after the end of the expirationPeriod. In this case, 
-#   see also the last page of section 3.3.1 of the Reference Guide.
-
-# Creation of the necessary certificate (OSX):
-#
-#   $ /usr/bin/openssl genrsa -des3 -out private_key.pem -passout pass:the_passphrase 1024
-#   $ /usr/bin/openssl req -x509 -new -key private_key.pem -passin pass:the_passphrase -days 3650 -out private_certificate.cer
-
-
-
-#     # First, make sure you have everything setup correctly and all of your dependencies in place with:
-#     # 
-#     #   require 'rubygems'
-#     #   require 'active_merchant'
-#     #
-#     # ActiveMerchant expects the amounts to be given as an Integer in cents. In this case, 10 EUR becomes 1000.
-#     #
-#     # Configure the gateway using your Ideal account info and security settings:
-#     #
-#     # ActiveMerchant::Billing::IdealGateway.test_url = "https://idealtest.secure-ing.com:443/ideal/iDeal"
-#     # ActiveMerchant::Billing::IdealGateway.live_url = "https://ideal.secure-ing.com:443/ideal/iDeal"    
-#     # 
-#     # DEFAULT_IDEAL_OPTIONS = {
-#     #   :merchant => "123456789",
-#     #   :private_key => File.dirname(__FILE__) + "/../ideal/merchantprivatekey.pem",
-#     #   :private_cert => File.dirname(__FILE__) + "/../ideal/merchantprivatecert.cer",
-#     #   :ideal_cert => File.dirname(__FILE__) + "/../ideal/ideal.cer",
-#     #   :password => "password"
-#     # }
-#     #
-#     # Create gateway:
-#     # gateway = ActiveMerchant::Billing::Base.gateway(:ideal).new DEFAULT_IDEAL_OPTIONS 
-#     #
-#     #
-#     # Get list of issuers to fill selection list on your payment form:
-#     # response = gateway.issuers
-#     # list = response.issuer_list
-#     #
-#     # Request transaction:
-#     #
-#     # options = {
-#     #    :issuer_id=>'0001', 
-#     #    :expiration_period=>'PT10M', 
-#     #    :return_url =>'http://www.return.url', 
-#     #    :order_id=>'1234567890123456', 
-#     #    :currency=>'EUR', 
-#     #    :description => 'Een omschrijving', 
-#     #    :entrance_code => '1234'
-#     # }    
-#     #
-#     # response = gateway.setup_purchase(amount, options)
-#     # transaction_id = response.transaction['transactionID']
-#     # redirect_url = response.service_url
-#     #   
-#     # Mandatory status request will confirm transaction:
-#     # response = gateway.capture(:transaction_id => transaction_id)
-#     #
-#     # Implementation contains some simplifications
-#     # - does not support multiple subID per merchant
-#     # - language is fixed to 'nl'
-
 module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     # == iDEAL
@@ -97,16 +14,16 @@ module ActiveMerchant #:nodoc:
     #
     # If a consumer already has online banking with ABN AMRO, Fortis,
     # ING/Postbank, Rabobank, or SNS Bank, they can make payments using iDEAL in
-    # a way they are already familiar with.
+    # a way that they are already familiar with.
     #
     # See http://ideal.nl and http://idealdesk.com for more information.
     #
     # ==== Merchant account
     #
     # In order to use iDEAL you will need to get an iDEAL merchant account from
-    # your bank. Every bank offers their own ‘complete payment’ services, which
-    # can obfuscate the choices. The payment product that you will _want_ to
-    # get in order to use this gateway class is a bare bones iDEAL account.
+    # your bank. Every bank offers ‘complete payment’ services, which can
+    # obfuscate the right choice. The payment product that you will want to
+    # get, in order to use this gateway class, is a bare bones iDEAL account.
     #
     # * ING/Postbank: iDEAL Advanced
     # * ABN AMRO: iDEAL Zelfbouw (Do it yourself)
@@ -116,18 +33,15 @@ module ActiveMerchant #:nodoc:
     # ==== Private keys, certificates and all that jazz
     #
     # Messages to, and from, the acquirer, are all signed in order to prove
-    # their authenticity. This means you will have to have a certificate to
-    # sign your messages going _to_ the acquirer. And you will need to acquire
-    # the certificate of the acquirer which it uses to sign their messages.
+    # their authenticity. This means that you will have to have a certificate
+    # to sign your messages going to the acquirer _and_ you will need to have
+    # the certificate of the acquirer to verify its signed messages.
     #
     # The latter can be downloaded from your acquirer after registration.
     # The former, however, can be a certificate signed by a CA authority or a
     # self-signed certificate.
     #
-    # See, for instance, http://www.verisign.com for more info on a certificate
-    # signed by a CA authority.
-    #
-    # To create a self-signed certificate follow these few steps:
+    # To create a self-signed certificate follow these steps:
     #
     #   $ /usr/bin/openssl genrsa -des3 -out private_key.pem -passout pass:the_passphrase 1024
     #   $ /usr/bin/openssl req -x509 -new -key private_key.pem -passin pass:the_passphrase -days 3650 -out private_certificate.cer
@@ -138,11 +52,89 @@ module ActiveMerchant #:nodoc:
     # * http://en.wikipedia.org/wiki/Certificate_authority
     # * http://en.wikipedia.org/wiki/Self-signed_certificate
     #
-    # === Example
+    # === Example (Rails)
     #
-    # First we'll need to configure the gateway:
+    # ==== First configure the gateway
     #
-    #   
+    # Put the following code in, for instance, an initializer:
+    #
+    #   IdealGateway.live_url = 'https://ideal.secure-ing.com:443/ideal/iDeal'
+    #
+    #   IdealGateway.merchant_id = '00123456789'
+    #
+    #   # CERTIFICATE_ROOT points to a directory where the key and certificates are located.
+    #   IdealGateway.passphrase = 'the_private_key_passphrase'
+    #   IdealGateway.private_key_file = File.join(CERTIFICATE_ROOT, 'private_key.pem')
+    #   IdealGateway.private_certificate_file = File.join(CERTIFICATE_ROOT, 'private_certificate.cer')
+    #   IdealGateway.ideal_certificate_file = File.join(CERTIFICATE_ROOT, 'ideal.cer')
+    #
+    # ==== View
+    #
+    # Give the consumer a list of available issuer options:
+    #
+    #   gateway = ActiveMerchant::Billing::IdealGateway.new
+    #   issuers = gateway.issuers.list
+    #   sorted_issuers = issuers.sort_by { |issuer| issuer[:name] }
+    #   select('purchase', 'issuer_id', issuers.map { |issuer| [issuer[:name], issuer[:id]] })
+    #
+    # Could become:
+    #
+    #   <select name="purchase[issuer_id]">
+    #     <option value="1006" selected="selected">ABN AMRO Bank</option>
+    #     <option value="1017">Asr bank</option>
+    #     <option value="1003">Postbank</option>
+    #     <option value="1005">Rabobank</option>
+    #     <option value="1023">Van Lanschot</option>
+    #   </select>
+    #
+    # ==== Controller
+    #
+    # First you'll need to setup a transaction and redirect the consumer there
+    # so she can make the payment:
+    #
+    #   class PurchasesController < ActionController::Base
+    #     def create
+    #       purchase = @user.purchases.build(:price => 1000) # €10.00 in cents.
+    #       purchase.save(false) # We want an id for the URL.
+    #
+    #       purchase_options = {
+    #         :issuer_id => params[:purchase][:issuer_id],
+    #         :order_id => purchase.id,
+    #         :return_url => purchase_url(purchase),
+    #         :description => 'A Dutch windmill'
+    #       }
+    #
+    #       # Save the purchase instance so that the consumer can return to its resource url to finish the transaction.
+    #       purchase.update_attributes!(purchase_options)
+    #
+    #       gateway = ActiveMerchant::Billing::IdealGateway.new
+    #       transaction_response = gateway.setup_purchase(purchase.price, purchase_options)
+    #       if transaction_response.success?
+    #
+    #         # Store the transaction_id that the acquirer has created to identify the transaction.
+    #         purchase.update_attributes!(:transaction_id => transaction_response.transaction_id)
+    #
+    #         # Redirect the consumer to the issuer’s payment page.
+    #         redirect_to transaction_response.service_url
+    #       end
+    #     end
+    #   end
+    #
+    # After the consumer is done with the payment she will be redirected to the
+    # <tt>:return_url</tt>. It's now _your_ responsibility as merchant to check
+    # if the payment has been made:
+    #
+    #   class PurchasesController < ActionController::Base
+    #     def show
+    #       gateway = ActiveMerchant::Billing::IdealGateway.new
+    #       transaction_status = gateway.capture(@purchase.transaction_id)
+    #
+    #       if transaction_status.success?
+    #         @purchase.update_attributes!(:paid => true)
+    #         flash[:notice] = "Congratulations, you are now the proud owner of a Dutch windmill!"
+    #       end
+    #     end
+    #   end
     class IdealGateway < Gateway
       AUTHENTICATION_TYPE = 'SHA1_RSA'
       LANGUAGE = 'nl'
@@ -150,7 +142,8 @@ module ActiveMerchant #:nodoc:
       API_VERSION = '1.1.0'
       XML_NAMESPACE = 'http://www.idealdesk.com/Message'
 
-      # Assigns the global iDEAL merchant id.
+      # Assigns the global iDEAL merchant id. Make sure to use a string with
+      # leading zeroes if needed.
       cattr_accessor :merchant_id
 
       # Assigns the passphrase that should be used for the merchant private_key.
@@ -218,8 +211,7 @@ module ActiveMerchant #:nodoc:
 
       # Initializes a new IdealGateway instance.
       #
-      # You can optionally specify <tt>:sub_id</tt> if applicable. It defaults
-      # to 0.
+      # You can optionally specify <tt>:sub_id</tt>. Defaults to 0.
       def initialize(options = {})
         @sub_id = options[:sub_id] || 0
         super
@@ -237,7 +229,7 @@ module ActiveMerchant #:nodoc:
       # IdealDirectoryResponse. Use IdealDirectoryResponse#list to receive the
       # actuall array of available issuers.
       #
-      #   gateway.issuers.list # => [{ :id => '1006', :name => 'ABN AMRO Bank' }]
+      #   gateway.issuers.list # => [{ :id => '1006', :name => 'ABN AMRO Bank' }, …]
       def issuers
         post_data build_directory_request_body, IdealDirectoryResponse
       end
@@ -248,13 +240,17 @@ module ActiveMerchant #:nodoc:
       # On success returns an IdealTransactionResponse with the #transaction_id
       # which is needed for the capture step. (See capture for an example.)
       #
-      # ==== Options
+      # The iDEAL specification states that it is _not_ allowed to use another
+      # window or frame when redirecting the consumer to the issuer. So the
+      # entire merchant’s page has to be replaced by the selected issuer’s page.
+      #
+      # === Options
       #
       # Note that all options that have a character limit are _also_ checked
       # for diacritical characters. If it does contain diacritical characters,
       # or exceeds the character limit, an ArgumentError is raised.
       #
-      # ===== Required
+      # ==== Required
       #
       # * <tt>:issuer_id</tt> - The <tt>:id</tt> of an issuer available at the acquirer to which the transaction should be made.
       # * <tt>:order_id</tt> - The order number. Limited to 12 characters.
@@ -263,7 +259,7 @@ module ActiveMerchant #:nodoc:
       #   * <tt>trxid</tt> - The <tt>:order_id</tt>.
       #   * <tt>ec</tt> - The <tt>:entrance_code</tt> _if_ it was specified.
       #
-      # ===== Optional
+      # ==== Optional
       #
       # * <tt>:entrance_code</tt> - This code is an abitrary token which can be used to identify the transaction besides the <tt>:order_id</tt>. Limited to 40 characters.
       # * <tt>:expiration_period</tt> - The period of validity of the payment request measured from the receipt by the issuer. The consumer must approve the payment within this period, otherwise the IdealStatusResponse#status will be set to `Expired'. E.g., consider an <tt>:expiration_period</tt> of `P3DT6H10M':
@@ -272,6 +268,16 @@ module ActiveMerchant #:nodoc:
       #   * T: separator.
       #   * 6 hours.
       #   * 10 minutes.
+      #
+      # === Example
+      #
+      #   transaction_response = gateway.setup_purchase(4321, valid_options)
+      #   if transaction_response.success?
+      #     @purchase.update_attributes!(:transaction_id => transaction_response.transaction_id)
+      #     redirect_to transaction_response.service_url
+      #   end
+      #
+      # See the IdealGateway class description for a more elaborate example.
       def setup_purchase(money, options)
         post_data build_transaction_request_body(money, options), IdealTransactionResponse
       end
@@ -279,15 +285,19 @@ module ActiveMerchant #:nodoc:
       # Sends a acquirer status request for the specified +transaction_id+ and
       # returns an IdealStatusResponse.
       #
-      #   transaction_response = gateway.setup_purchase(4321, valid_options)
+      # It is _your_ responsibility as the merchant to check if the payment has
+      # been made until you receive a response with a finished status like:
+      # `Success', `Cancelled', `Expired', everything else equals `Open'.
       #
-      #   if transaction_response.success?
-      #     capture_response = gateway.capture(transaction_response.transaction_id)
+      # === Example
       #
-      #     if capture_response.success?
-      #       puts "Congratulations, you are now the proud owner of a Dutch windmill!"
-      #     end
+      #   capture_response = gateway.capture(@purchase.transaction_id)
+      #   if capture_response.success?
+      #     @purchase.update_attributes!(:paid => true)
+      #     flash[:notice] = "Congratulations, you are now the proud owner of a Dutch windmill!"
       #   end
+      #
+      # See the IdealGateway class description for a more elaborate example.
       def capture(transaction_id)
         post_data build_status_request_body(:transaction_id => transaction_id), IdealStatusResponse
       end

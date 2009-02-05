@@ -367,6 +367,19 @@ module IdealTestCases
     def test_returns_error_code
       assert_equal 'SO1000', @response.error_code
     end
+
+    def test_returns_error_type
+      [
+        ['IX1000', :xml],
+        ['SO1000', :system],
+        ['SE2000', :security],
+        ['BR1200', :value],
+        ['AP1000', :application]
+      ].each do |code, type|
+        @response.stubs(:error_code).returns(code)
+        assert_equal type, @response.error_type
+      end
+    end
   end
 
   class DirectoryTest < Test::Unit::TestCase
@@ -466,9 +479,23 @@ module IdealTestCases
 
       assert !capture_response.success?
     end
-    
+
+    def test_returns_status
+      response = IdealStatusResponse.new(ACQUIRER_SUCCEEDED_STATUS_RESPONSE)
+      [
+        ['Success',   :success],
+        ['Cancelled', :cancelled],
+        ['Expired',   :expired],
+        ['Open',      :open],
+        ['Failure',   :failure]
+      ].each do |raw_status, expected_status|
+        response.stubs(:transaction).returns('status' => raw_status)
+        assert_equal expected_status, response.status
+      end
+    end
+
     private
-    
+
     def expects_request_and_returns(str)
       @gateway.expects(:ssl_post).with(@gateway.acquirer_url, 'the request body').returns(str)
     end

@@ -60,28 +60,28 @@ class IdealTest < Test::Unit::TestCase
     captured_response = capture_transaction(:cancelled)
 
     assert_failure captured_response
-    assert_equal 'Cancelled', captured_response.status
+    assert_equal :cancelled, captured_response.status
   end
 
   def test_expired_transaction
     captured_response = capture_transaction(:expired)
 
     assert_failure captured_response
-    assert_equal 'Expired', captured_response.status
+    assert_equal :expired, captured_response.status
   end
 
   def test_still_open_transaction
     captured_response = capture_transaction(:open)
 
     assert_failure captured_response
-    assert_equal 'Open', captured_response.status
+    assert_equal :open, captured_response.status
   end
 
   def test_failed_transaction
     captured_response = capture_transaction(:failure)
 
     assert_failure captured_response
-    assert_equal 'Failure', captured_response.status
+    assert_equal :failure, captured_response.status
   end
 
   def test_internal_server_error
