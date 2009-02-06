@@ -26,9 +26,10 @@ module ActiveMerchant #:nodoc:
     # get, in order to use this gateway class, is a bare bones iDEAL account.
     #
     # * ING/Postbank: iDEAL Advanced
-    # * ABN AMRO: iDEAL Zelfbouw (Do it yourself)
-    #
-    # TODO: Add the names of the correct payment products from the other banks.
+    # * ABN AMRO: iDEAL Zelfbouw
+    # * Fortis: ? (Unknown)
+    # * Rabobank: Rabo iDEAL Professional. (Unverified)
+    # * SNS Bank: Not yet available. (http://www.snsbank.nl/zakelijk/betalingsverkeer/kan-ik-ideal-gebruiken-voor-mijn-webwinkel.html)
     #
     # ==== Private keys, certificates and all that jazz
     #
