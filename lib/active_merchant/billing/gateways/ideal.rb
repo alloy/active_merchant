@@ -345,9 +345,8 @@ module ActiveMerchant #:nodoc:
       end
 
       # iDeal doesn't really seem to care about nice looking keys in their XML.
-      # And since there doesn't seem to be any method in this madness, I could
-      # not come up with a better name than uglify_key…
-      def uglify_key(key)
+      # Probably some Java XML class, hence the method name.
+      def javaize_key(key)
         key = key.to_s
         case key
         when 'acquirer_transaction_request'
@@ -376,15 +375,15 @@ module ActiveMerchant #:nodoc:
       def xml_for(name, tags_and_values)
         xml = Builder::XmlMarkup.new
         xml.instruct!
-        xml.tag!(uglify_key(name), 'xmlns' => XML_NAMESPACE, 'version' => API_VERSION) { xml_from_array(xml, tags_and_values) }
+        xml.tag!(javaize_key(name), 'xmlns' => XML_NAMESPACE, 'version' => API_VERSION) { xml_from_array(xml, tags_and_values) }
         xml.target!
       end
 
       # Recursively creates xml for a given hash of tag-value pair. Uses
-      # uglify_key on the tags to create the tags needed by iDeal.
+      # javaize_key on the tags to create the tags needed by iDeal.
       def xml_from_array(builder, tags_and_values)
         tags_and_values.each do |tag, value|
-          tag = uglify_key(tag)
+          tag = javaize_key(tag)
           if value.is_a?(Array)
             builder.tag!(tag) { xml_from_array(builder, value) }
           else

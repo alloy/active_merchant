@@ -78,7 +78,7 @@ module IdealTestCases
       assert_equal timestamp, @gateway.send(:created_at_timestamp)
     end
 
-    def test_pretty_to_ugly_keys_conversion
+    def test_ruby_to_java_keys_conversion
       keys = [
         [:acquirer_transaction_request, 'AcquirerTrxReq'],
         [:acquirer_status_request,      'AcquirerStatusReq'],
@@ -98,12 +98,12 @@ module IdealTestCases
       ]
 
       keys.each do |key, expected_key|
-        assert_equal expected_key, @gateway.send(:uglify_key, key)
+        assert_equal expected_key, @gateway.send(:javaize_key, key)
       end
     end
 
-    def test_does_not_convert_unknown_key_to_ugly_key
-      assert_equal 'not_a_registered_key', @gateway.send(:uglify_key, :not_a_registered_key)
+    def test_does_not_convert_unknown_key_to_java_key
+      assert_equal 'not_a_registered_key', @gateway.send(:javaize_key, :not_a_registered_key)
     end
 
     def test_token_generation
@@ -149,7 +149,7 @@ module IdealTestCases
       assert_equal expected_xml.target!, @gateway.send(:xml_for, :acquirer_transaction_request, [])
     end
 
-    def test_creates_correct_xml_from_array_with_ugly_keys
+    def test_creates_correct_xml_with_java_keys_from_array_with_ruby_keys
       expected_xml = Builder::XmlMarkup.new
       expected_xml.instruct!
       expected_xml.tag!('AcquirerTrxReq', 'xmlns' => IdealGateway::XML_NAMESPACE, 'version' => IdealGateway::API_VERSION) do
