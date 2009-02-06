@@ -31,6 +31,15 @@ module ActiveMerchant #:nodoc:
     # * Rabobank: Rabo iDEAL Professional. (Unverified)
     # * SNS Bank: Not yet available. (http://www.snsbank.nl/zakelijk/betalingsverkeer/kan-ik-ideal-gebruiken-voor-mijn-webwinkel.html)
     #
+    # At least the ING bank requires you to perform 7 remote tests which have
+    # to pass before you will get access to the live environment. These tests
+    # have been implemented in the remote tests. Running these should be enough:
+    #
+    #   test/remote/remote_ideal_test.rb
+    #
+    # If you implement tests for other banks, if they require such acceptance
+    # tests, please do submit a patch or contact me directly: eloy@fngtps.com.
+    #
     # ==== Private keys, certificates and all that jazz
     #
     # Messages to, and from, the acquirer, are all signed in order to prove
