@@ -136,6 +136,15 @@ module ActiveMerchant #:nodoc:
     #       end
     #     end
     #   end
+    #
+    # === Response classes
+    #
+    # * IdealResponse
+    # * IdealTransactionResponse
+    # * IdealStatusResponse
+    # * IdealDirectoryResponse
+    #
+    # See the IdealResponse base class for more information on errors.
     class IdealGateway < Gateway
       AUTHENTICATION_TYPE = 'SHA1_RSA'
       LANGUAGE = 'nl'
