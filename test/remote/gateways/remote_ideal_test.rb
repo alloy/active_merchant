@@ -36,8 +36,8 @@ class IdealTest < Test::Unit::TestCase
 
     assert_failure response
     assert_equal "BR1210", response.error_code
-    assert_not_nil response.error_message[:system]
-    assert_not_nil response.error_message[:human]
+    assert_not_nil response.error_message
+    assert_not_nil response.consumer_error_message
   end
 
   # TODO: Should we raise a SecurityError instead of setting success to false?

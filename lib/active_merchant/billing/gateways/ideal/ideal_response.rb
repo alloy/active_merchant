@@ -1,5 +1,6 @@
 require 'openssl'
 require 'base64'
+require 'rexml/document'
 
 module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
@@ -9,19 +10,19 @@ module ActiveMerchant #:nodoc:
     # then two retries per request.
     class IdealResponse < Response
       def initialize(response_body, options = {})
-        @params = Hash.from_xml(response_body)
+        @response = REXML::Document.new(response_body).root
         @success = !error_occured?
         @test = options[:test]
       end
 
-      # Returns a hash containing the <tt>:system</tt> error message which is
-      # the technical version, whereas the <tt>:human</tt> error message is a
-      # human readable version of the error message.
+      # Returns a technical error message.
       def error_message
-        unless success?
-          error = @params['error_res']['error']
-          { :system => error['error_message'], :human => error['consumer_message'] }
-        end
+        text('//Error/errorMessage') unless success?
+      end
+
+      # Returns a consumer friendly error message.
+      def consumer_error_message
+        text('//Error/consumerMessage') unless success?
       end
 
       # Returns an error type inflected from the first two characters of the
@@ -112,13 +113,17 @@ module ActiveMerchant #:nodoc:
       # * <tt>AP2915</tt> - Amount too low. (Detailed record states the minimum amount).
       # * <tt>AP2920</tt> - Please adjust expiration period. See suggested expiration period.
       def error_code
-        @params['error_res']['error']['error_code'] unless success?
+        text('//errorCode') unless success?
       end
 
       private
 
       def error_occured?
-        @params.keys.first == 'error_res'
+        @response.name == 'ErrorRes'
+      end
+
+      def text(path)
+        @response.get_text(path).to_s
       end
     end
 
@@ -130,24 +135,18 @@ module ActiveMerchant #:nodoc:
       # Returns the URL to the issuer’s page where the consumer should be
       # redirected to in order to perform the payment.
       def service_url
-        @params['acquirer_trx_res']['issuer']['issuer_authentication_url']
+        text('//issuerAuthenticationURL')
       end
 
       # Returns the transaction ID which is needed for requesting the status
       # of a transaction. See IdealGateway#capture.
       def transaction_id
-        transaction['transaction_id']
+        text('//transactionID')
       end
 
       # Returns the <tt>:order_id</tt> for this transaction.
       def order_id
-        transaction['purchase_id']
-      end
-
-      private
-
-      def transaction
-        @params['acquirer_trx_res']['transaction']
+        text('//purchaseID')
       end
     end
 
@@ -157,6 +156,10 @@ module ActiveMerchant #:nodoc:
     #
     # It takes care of checking if the message was authentic by verifying the
     # the message and its signature against the iDEAL certificate.
+    #
+    # If success? returns +false+ because the authenticity wasn't verified
+    # there will be no error_code, error_message, and error_type. Use verified?
+    # to check if the authenticity has been verified.
     class IdealStatusResponse < IdealResponse
       def initialize(response_body, options = {})
         super
@@ -167,7 +170,7 @@ module ActiveMerchant #:nodoc:
       # <tt>:cancelled</tt>, <tt>:expired</tt>, <tt>:open</tt>, or
       # <tt>:failure</tt>.
       def status
-        transaction['status'].downcase.to_sym
+        text('//status').downcase.to_sym
       end
 
       # Returns whether or not the authenticity of the message could be
@@ -184,18 +187,13 @@ module ActiveMerchant #:nodoc:
         !error_occured? && status == :success && verified?
       end
 
-      def transaction
-        @params['acquirer_status_res']['transaction']
-      end
-
+      # The message that we need to verify the authenticity.
       def message
-        message = @params['acquirer_status_res']['create_date_time_stamp'] + transaction['transaction_id'] + transaction['status']
-        message += transaction['consumer_account_number'] #if transaction['consumer_account_number']
-        message
+        text('//createDateTimeStamp') + text('//transactionID') + text('//status') + text('//consumerAccountNumber')
       end
 
       def signature
-        Base64.decode64(@params['acquirer_status_res']['signature']['signature_value'])
+        Base64.decode64(text('//signatureValue'))
       end
     end
 
@@ -207,11 +205,8 @@ module ActiveMerchant #:nodoc:
       #
       #   gateway.issuers.list # => [{ :id => '1006', :name => 'ABN AMRO Bank' }]
       def list
-        issuers = @params['directory_res']['directory']['issuer']
-        issuers = [issuers] unless issuers.is_a?(Array)
-
-        issuers.map do |issuer|
-          { :id => issuer['issuer_id'], :name => issuer['issuer_name'] }
+        @response.get_elements('//Issuer').map do |issuer|
+          { :id => issuer.get_text('issuerID').to_s, :name => issuer.get_text('issuerName').to_s }
         end
       end
     end

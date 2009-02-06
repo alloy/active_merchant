@@ -334,7 +334,8 @@ module IdealTestCases
     end
 
     def test_initializes_with_only_response_body
-      assert_equal Hash.from_xml(DIRECTORY_RESPONSE_WITH_MULTIPLE_ISSUERS), @response.params
+      assert_equal REXML::Document.new(DIRECTORY_RESPONSE_WITH_MULTIPLE_ISSUERS).root.to_s,
+                    @response.instance_variable_get(:@response).to_s
     end
 
     def test_successful
@@ -360,8 +361,8 @@ module IdealTestCases
     end
 
     def test_returns_error_messages
-      assert_equal 'Failure in system', @response.error_message[:system]
-      assert_equal 'Betalen met iDEAL is nu niet mogelijk.', @response.error_message[:human]
+      assert_equal 'Failure in system', @response.error_message
+      assert_equal 'Betalen met iDEAL is nu niet mogelijk.', @response.consumer_error_message
     end
 
     def test_returns_error_code
@@ -488,7 +489,7 @@ module IdealTestCases
         ['Open',      :open],
         ['Failure',   :failure]
       ].each do |raw_status, expected_status|
-        response.stubs(:transaction).returns('status' => raw_status)
+        response.stubs(:text).with("//status").returns(raw_status)
         assert_equal expected_status, response.status
       end
     end
