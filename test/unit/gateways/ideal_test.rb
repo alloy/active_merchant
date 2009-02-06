@@ -207,10 +207,6 @@ module IdealTestCases
       end
     end
 
-    # FIXME: This is a very weak test, what if there are aother characters than `è'.
-    # However, I don't want to invest too much time in this atm, because A it's just
-    # wrong that we can't just use UTF as we should be able to and B we might replace
-    # the ArgumentError with just normalizing the string.
     def test_checks_that_fields_do_not_contain_diacritical_characters
       assert_raise ArgumentError do
         @gateway.send(:build_transaction_request_body, 'graphème', VALID_PURCHASE_OPTIONS)

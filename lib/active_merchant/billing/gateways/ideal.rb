@@ -311,14 +311,10 @@ module ActiveMerchant #:nodoc:
 
       # This is the list of charaters that are not supported by iDEAL according
       # to the PHP source provided by ING plus the same in capitals.
-      #
-      # TODO: Maybe we should just normalize?
-      DIACRITICAL_CHARACTERS = /[ÀÁÂÃÄÅÇŒÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝàáâãäåçæèéêëìíîïñòóôõöøùúûüý]/
+      DIACRITICAL_CHARACTERS = /[ÀÁÂÃÄÅÇŒÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝàáâãäåçæèéêëìíîïñòóôõöøùúûüý]/ #:nodoc:
 
       # Raises an ArgumentError if the +string+ exceeds the +max_length+ amount
       # of characters or contains any diacritical characters.
-      #
-      # TODO: Or should we just normalize and optionally warn the user?
       def ensure_validity(key, string, max_length)
         raise ArgumentError, "The value for `#{key}' exceeds the limit of #{max_length} characters." if string.length > max_length
         raise ArgumentError, "The value for `#{key}' contains diacritical characters `#{string}'." if string =~ DIACRITICAL_CHARACTERS
