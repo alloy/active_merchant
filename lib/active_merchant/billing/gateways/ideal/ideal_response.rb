@@ -25,6 +25,11 @@ module ActiveMerchant #:nodoc:
         text('//Error/consumerMessage') unless success?
       end
 
+      # Returns details on the error if available.
+      def error_details
+        text('//Error/errorDetail') unless success?
+      end
+
       # Returns an error type inflected from the first two characters of the
       # error code. See error_code for a full list of errors.
       #

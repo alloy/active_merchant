@@ -358,6 +358,7 @@ module IdealTestCases
 
     def test_returns_error_messages
       assert_equal 'Failure in system', @response.error_message
+      assert_equal 'System generating error: issuer', @response.error_details
       assert_equal 'Betalen met iDEAL is nu niet mogelijk.', @response.consumer_error_message
     end
 
