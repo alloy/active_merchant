@@ -40,6 +40,15 @@ class IdealTest < Test::Unit::TestCase
     assert_not_nil response.error_message[:human]
   end
 
+  # TODO: Should we raise a SecurityError instead of setting success to false?
+  def test_status_response_with_invalid_signature
+    IdealStatusResponse.any_instance.stubs(:signature).returns('db82/jpJRvKQKoiDvu33X0yoDAQpayJOaW2Y8zbR1qk1i3epvTXi+6g+QVBY93YzGv4w+Va+vL3uNmzyRjYsm2309d1CWFVsn5Mk24NLSvhYfwVHEpznyMqizALEVUNSoiSHRkZUDfXowBAyLT/tQVGbuUuBj+TKblY826nRa7U=')
+    response = capture_transaction(:success)
+
+    assert_failure response
+    assert !response.verified?
+  end
+
   ###
   #
   # These are the 7 integration tests of ING which need to be ran sucessfuly

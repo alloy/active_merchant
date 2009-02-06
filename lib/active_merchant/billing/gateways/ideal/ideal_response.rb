@@ -170,12 +170,18 @@ module ActiveMerchant #:nodoc:
         transaction['status'].downcase.to_sym
       end
 
+      # Returns whether or not the authenticity of the message could be
+      # verified.
+      def verified?
+        @verified ||= IdealGateway.ideal_certificate.public_key.
+                        verify(OpenSSL::Digest::SHA1.new, signature, message)
+      end
+
       private
 
       # Checks if no errors occured _and_ if the message was authentic.
       def transaction_successful?
-        return false if error_occured?
-        status == :success && response_verified?
+        !error_occured? && status == :success && verified?
       end
 
       def transaction
@@ -184,17 +190,12 @@ module ActiveMerchant #:nodoc:
 
       def message
         message = @params['acquirer_status_res']['create_date_time_stamp'] + transaction['transaction_id'] + transaction['status']
-        message += transaction['consumer_account_number'] if transaction['consumer_account_number']
+        message += transaction['consumer_account_number'] #if transaction['consumer_account_number']
         message
       end
 
       def signature
         Base64.decode64(@params['acquirer_status_res']['signature']['signature_value'])
-      end
-
-      # Verifies that the signature matches the IdealGateway.ideal_certificate.
-      def response_verified?
-        IdealGateway.ideal_certificate.public_key.verify(OpenSSL::Digest::SHA1.new, signature, message)
       end
     end
 
